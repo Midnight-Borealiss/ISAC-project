@@ -14,10 +14,16 @@ import json
 def get_service_account_credentials():
     """Charge les credentials du compte de service GSheets."""
     try:
-        gsheet_secrets = st.secrets["gsheets"]
+        # 1. Copie du dictionnaire secrets (Solution à la TypeError)
+        gsheet_secrets = dict(st.secrets["gsheets"]) # <-- CRÉATION D'UNE COPIE MODIFIABLE
+        
+        # 2. Correction de la clé privée (maintenant autorisé sur la COPIE)
+        # La valeur de 'private_key' est une chaîne, et doit être modifiée.
         gsheet_secrets["private_key"] = gsheet_secrets["private_key"].replace('\\n', '\n')
+        
         return gsheet_secrets
-    except KeyError:
+    except KeyError as e:
+        print(f"DEBUG: La section 'gsheets' ou une clé manque dans secrets.toml: {e}")
         return None
 
 
