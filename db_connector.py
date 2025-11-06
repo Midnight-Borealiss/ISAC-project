@@ -1,107 +1,79 @@
-# db_connector.py
+# db_connector.py (VERSION GOOGLE SHEETS)
 
 import streamlit as st
 import pandas as pd
-from pyairtable import Table
+import gspread # Nouveau
+from oauth2client.service_account import ServiceAccountCredentials # Nouveau
+from datetime import datetime
+import json
 
-# --- CONFIGURATION AIRTABLE ---
-# L'initialisation se fait via les fonctions du logger pour la sécurité
-try:
-    AIRTABLE_API_KEY = st.secrets["airtable"]["API_KEY"]
-    AIRTABLE_BASE_ID = st.secrets["airtable"]["BASE_ID"]
-    FAQ_TABLE_NAME = st.secrets["airtable"]["TABLE_FAQ"]
-except KeyError:
-    # Si les secrets manquent, les noms de tables ne seront pas définis
-    AIRTABLE_API_KEY = None
-    AIRTABLE_BASE_ID = None
-    FAQ_TABLE_NAME = None
+# --- CONFIGURATION GOOGLE SHEETS ---
 
-
-# Utilisation de st.cache_resource pour garantir que la base n'est chargée qu'une seule fois
-# et que les erreurs d'API sont gérées.
+# Utilisation d'un format spécifique pour charger les secrets GSheets
 @st.cache_resource
-def get_airtable_table(table_name):
-    """Charge un objet Table Airtable en toute sécurité et le met en cache."""
-    # Cette fonction est normalement définie dans logger.py, mais nous la redéfinissons
-    # ici pour l'utiliser lors du chargement de la FAQ, si vous ne pouvez pas l'importer.
-    # Si vous pouvez importer get_airtable_table depuis logger.py, utilisez l'import.
-    
-    # Si vous ne pouvez pas faire l'import :
-    if not AIRTABLE_API_KEY or not AIRTABLE_BASE_ID or not table_name:
-        print(f"DEBUG DB: Clés Airtable ou nom de table '{table_name}' manquants.")
-        return None
-
+def get_service_account_credentials():
+    """Charge les credentials du compte de service GSheets."""
     try:
-        table = Table(AIRTABLE_API_KEY, AIRTABLE_BASE_ID, table_name)
-        return table
-    except Exception as e:
-        print(f"======================================================")
-        print(f"!!! ÉCHEC FATAL DE LA CONNEXION AIRTABLE FAQ !!!")
-        print(f"Tentative de connexion à la table : {table_name}")
-        print(f"CAUSE PROBABLE: API_KEY ou BASE_ID incorrects ou expirés.")
-        print(f"ERREUR AIRTABLE: {e}") 
-        print(f"======================================================")
+        # Streamlit permet de charger les secrets GSheets directement
+        # en utilisant le format du fichier JSON
+        gsheet_secrets = st.secrets["gsheets"]
+        
+        # Le secret "private_key" est le seul qui a besoin d'être traité
+        # pour s'assurer que les retours à la ligne sont rétablis
+        gsheet_secrets["private_key"] = gsheet_secrets["private_key"].replace('\\n', '\n')
+        
+        return gsheet_secrets
+    except KeyError as e:
+        print(f"DEBUG DB: La section 'gsheets' ou une clé manque dans secrets.toml: {e}")
         return None
 
-# --- FONCTION PRINCIPALE DE CHARGEMENT DE LA BASE DE CONNAISSANCES ---
+# --- ACCÈS AUX DONNÉES EN LECTURE (FAQ) ---
 
-@st.cache_data(ttl=3600)  # Mise en cache des données lues
+@st.cache_resource(ttl=3600) # Rafraîchit la base toutes les heures
 def get_knowledge_base():
-    """Charge et prépare la base de connaissances FAQ depuis Airtable."""
+    """Charge la base de connaissances (onglet 'FAQ') depuis Google Sheets."""
     knowledge_base = []
     
-    # Récupérer l'objet Table pour la FAQ
-    faq_table = get_airtable_table(FAQ_TABLE_NAME)
-
-    if faq_table is None:
-        print("DEBUG DB: Base de connaissances FAQ non chargée car la connexion Airtable a échoué.")
-        return []
-
     try:
-        records = faq_table.all()
+        # 1. Authentification
+        credentials = get_service_account_credentials()
+        gc = gspread.service_account_from_dict(credentials)
         
-        for record in records:
-            fields = record.get("fields", {})
-            
-            # 1. Lecture des champs (comme vous l'aviez fait)
-            if fields.get("Statut") != "Archivé": 
-                knowledge_base.append({
-                    "id": record.get("id"),
-                    "question": fields.get("Questions"),         
-                    "formulations": fields.get("Formulations"), 
-                    "reponse": fields.get("Réponses"),           
-                    "mots_cles": fields.get("Mots-clés")         
-                })
+        # 2. Ouverture du document et de l'onglet FAQ
+        sh = gc.open_by_url(st.secrets["gsheets"]["sheet_url"])
+        worksheet = sh.worksheet("FAQ") # Nom de l'onglet
+
+        # 3. Lecture des données
+        data = worksheet.get_all_records()
+        knowledge_base = data
         
-        # 2. <<< NOUVEAU BLOC : CRÉATION DU CHAMP DE RECHERCHE >>>
+        # <<< DÉBUT DU BLOC RAG / PRÉ-TRAITEMENT >>>
         print("DEBUG DB: Démarrage du pré-traitement RAG.")
         
         for entry in knowledge_base:
-            # Concaténer les champs pertinents pour créer le texte de recherche
+            # Assurez-vous que les clés 'question' et 'réponse' existent dans votre Sheet
+            entry['question'] = entry.get('Questions', '') # Utilisez vos noms de colonnes exacts
+            entry['reponse'] = entry.get('Réponses', '')  # Utilisez vos noms de colonnes exacts
+            entry['formulations'] = entry.get('Formulations (Input RAG)', '') # Si vous avez ce champ
+            
             search_content = (
-                f"{entry.get('question', '')} "
+                f"{entry['question']} "
                 f"{entry.get('formulations', '')} "
                 f"{entry.get('mots_cles', '')}"
             )
-            # Ajouter la clé 'search_text' que agent.py attend
             entry['search_text'] = search_content.lower() 
-        # <<< FIN DU NOUVEAU BLOC >>>
         
-        # Affichage du statut dans les logs Streamlit Cloud
         print(f"DEBUG DB: Succès. Base de connaissances chargée et prête pour le RAG avec {len(knowledge_base)} entrées.")
         
     except Exception as e:
-        # Ceci capture les erreurs de lecture de la table (ex: champ non trouvé)
         print(f"======================================================")
-        print(f"!!! ÉCHEC DE LECTURE DE LA BASE AIRTABLE FAQ !!!")
-        print(f"CAUSE PROBABLE: Nom de colonne incorrect dans la table '{FAQ_TABLE_NAME}'.")
-        print(f"ERREUR AIRTABLE: {e}") 
+        print(f"!!! ÉCHEC DE LECTURE DE LA BASE GOOGLE SHEETS FAQ !!!")
+        print(f"CAUSE PROBABLE: URL incorrecte, onglet 'FAQ' manquant, ou clés JSON invalides.")
+        print(f"ERREUR GSheets: {e}") 
         print(f"======================================================")
         knowledge_base = []
         
     return knowledge_base
-knowledge_base = get_knowledge_base()
 
-# Le code suivant est nécessaire pour s'assurer que la base est chargée au démarrage
-# et affichera les messages de débogage.
-# knowledge_base = get_knowledge_base()
+# Le chargement est fait au démarrage
+knowledge_base = get_knowledge_base()
