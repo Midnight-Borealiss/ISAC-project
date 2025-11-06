@@ -57,41 +57,7 @@ AIRTABLE_NEW_QUESTIONS_TABLE = get_airtable_table(NEW_QUESTIONS_TABLE_NAME)
 # L'indicateur de préparation est maintenant basé sur la réussite du chargement
 IS_AIRTABLE_READY = AIRTABLE_LOGS_TABLE is not None and AIRTABLE_NEW_QUESTIONS_TABLE is not None
 
-def test_airtable_write_to_faq():
-    """Tente d'écrire un enregistrement de test dans la table FAQ."""
-    # Cette fonction est utilisée uniquement pour diagnostiquer les permissions d'écriture.
-    
-    # Assurez-vous que l'initialisation des tables est faite quelque part
-    from logger import get_airtable_table # Importe la fonction de logger.py
-    
-    FAQ_table = get_airtable_table(FAQ_TABLE_NAME)
-    
-    if FAQ_table is None:
-        print("TEST ÉCRITURE: La table FAQ n'est pas chargée (problème de secrets ou de nom).")
-        return False
 
-    try:
-        # Les champs doivent correspondre aux noms de colonnes EXACTS de la table FAQ
-        test_data = {
-            # On utilise les noms de colonnes de la FAQ qui fonctionnent en LECTURE
-            "Questions": f"Question TEST ÉCRITURE {datetime.now().strftime('%Y%m%d%H%M%S')}",
-            "Réponses": "Réponse de test pour validation de l'écriture API.",
-            # Ajoutez Formulations (Input RAG) si ce champ est obligatoire dans la FAQ
-            "Formulations (Input RAG)": "Test API", 
-            "Statut": "Brouillon"
-        }
-        
-        # Le champ Questions étant la clé primaire dans une table FAQ typique, il DOIT être fourni.
-        
-        FAQ_table.create(test_data)
-        print("TEST ÉCRITURE FAQ: ✅ Succès. L'écriture est possible.")
-        return True
-    
-    except Exception as e:
-        # Ceci capture l'échec de permission (403 Forbidden) ou de nom de colonne
-        print("TEST ÉCRITURE FAQ: ❌ ÉCHEC. L'écriture n'est PAS possible.")
-        print(f"ERREUR DÉTAILLÉE : {e}")
-        return False
 
 # --- FONCTIONS DE JOURNALISATION ---
 

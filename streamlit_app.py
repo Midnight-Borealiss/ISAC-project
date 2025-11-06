@@ -28,19 +28,7 @@ DEFAULT_PROFILE = "Testeur"
 # --- Configuration de la Page Streamlit ---
 st.set_page_config(page_title="Assistant ISMaiLa", layout="wide")
 
-# Lancer le test d'écriture une seule fois au démarrage (retirer après le diagnostic)
-from db_connector import test_airtable_write_to_faq
-if not st.session_state.get('write_test_done', False):
-    if test_airtable_write_to_faq():
-        # Affiche un message de succès (facultatif, à retirer après)
-        print("DIAGNOSTIC : Écriture sur la FAQ réussie. Le problème est dans les tables de logs.")
-    else:
-        # Affiche un message d'échec (facultatif, à retirer après)
-        print("DIAGNOSTIC : Écriture sur la FAQ échouée. VÉRIFIEZ LE JETON PAT.")
-    st.session_state['write_test_done'] = True
 
-
-if st.session_state.logged_in:
 
 # --- Initialisation des États de Session ---
 if "logged_in" not in st.session_state:
