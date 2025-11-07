@@ -83,7 +83,7 @@ def get_knowledge_base():
         print(error_message) # S'affiche dans les logs Streamlit Cloud si disponibles
         
         # Nous allons stocker l'erreur dans la session Streamlit
-        st.session_state['knowledge_base_error'] = error_message
+        #st.session_state['knowledge_base_error'] = error_message
         
         knowledge_base = []
         
