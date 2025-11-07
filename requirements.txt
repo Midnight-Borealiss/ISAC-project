@@ -1,6 +1,7 @@
 # requirements.txt
 streamlit
+pandas
+pytz
 gspread
 oauth2client
-pandas
 
