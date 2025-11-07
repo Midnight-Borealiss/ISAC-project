@@ -27,7 +27,7 @@
             ""
             
         ],
-        "answer": "Au niveau de votre agenda vous verrez qu'en fonction de votre cours la salle de classe est indiqué. Cela dit, si vous ne comprenez ma la nomenclature sachez que le premier chiffre désigne l'étage et le n dernier la salle. La première salla de chaque se trouve à coté du bureau admin et le dernier à coté d'un espace coworking.  "
+        "answer": "Au niveau de ton agenda tu peux voir la salle attribué à ta classe pour le cours que tu vas suivre"
     },
     
     {
@@ -43,7 +43,7 @@
             "Contact Administration",
             "Coordonnées administration"
         ],
-        "answer": "Vous pouvez contacter l'administration par email à info@ism.edu ou au +221 77 092 00 96 pendant les heures d'ouverture."
+        "answer": "Vous trouverez un à chaque étage du Campus Baobab un bureau administratif. Donnez leur votre classe et ils vous indiqueront la personne en charge "
     },
     {
         "questions": [
@@ -126,7 +126,7 @@
             "Comment avoir mon certificat de scolarité?"
             
         ],
-        "answer": "Il faut se rendre au rez-de -chaussée du Campus Baobab et demander après la scolarité."
+        "answer": "Il faut se rendre au rez-de -chaussée du Campus Baobab et demander après la scolarité qui se trouve au rez de chaussée à gauche au niveau du bureau du fond."
     },
     {
         "questions": [
@@ -144,7 +144,7 @@
     },
     {
         "questions": [
-            "J'ai oublié",
+            "J'ai oublié mon mot de passe",
             "Mot de passe oublié "
         ],
         "answer": "Faites le savoir à votre assistant de programme pour qu'il se charge de faire la demande de réinitialisation"
@@ -160,7 +160,7 @@
             "Quelles sont les bourses disponibles ?",
             "A qui s'adresser pour une aide financière ?"
         ],
-        "answer": "Les informations sur les bourses d'études sont disponibles sur le site du CROUS et sur la page \"Aides financières\" de l'université."
+        "answer": ""
     },
     {
         "questions": [
@@ -173,7 +173,7 @@
             "Le réseau sans fil ne fonctionne pas",
             "Aide pour la connexion Wi-Fi"
         ],
-        "answer": "Veuillez contacter le support technique de l'université au 01 23 45 67 80 ou consulter la section \"Assistance Réseau\" sur l'intranet."
+        "answer": "Veuillez contacter votre assistant de programme qui en fera part au support technique "
     },
     {
         "questions": [
@@ -186,7 +186,7 @@
             "Les heures d'ouverture de la BU",
             "Puis-je aller à la bibliothèque ce week-end ?"
         ],
-        "answer": "Oui, la bibliothèque universitaire est ouverte du lundi au vendredi de 9h à 18h."
+        "answer": "Oui il y a une bibliothèque universitaire est ouverte du lundi au vendredi de 9h à 18h et qui se trouve au premier étage du Campus Baoabab."
     },
     {"Catégorie": [ "----------------------------Les activités pédagogiques et parascolaires----------------------------------" ]},
     {

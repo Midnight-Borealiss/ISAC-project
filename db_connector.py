@@ -77,7 +77,19 @@ def get_knowledge_base():
         print(f"======================================================")
         knowledge_base = []
         
+    except Exception as e:
+        # Ceci affiche l'erreur spécifique à Streamlit pour l'administrateur (ou le testeur)
+        error_message = f"!!! ÉCHEC DE LECTURE GSheets !!! CAUSE: {e}"
+        print(error_message) # S'affiche dans les logs Streamlit Cloud si disponibles
+        
+        # Nous allons stocker l'erreur dans la session Streamlit
+        st.session_state['knowledge_base_error'] = error_message
+        
+        knowledge_base = []
+        
     return knowledge_base
+
+    
 
 # Le chargement est fait au démarrage
 knowledge_base = get_knowledge_base()

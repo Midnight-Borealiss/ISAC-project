@@ -1,5 +1,3 @@
-# logger.py (VERSION GOOGLE SHEETS)
-
 from datetime import datetime
 import streamlit as st
 import pytz # À garder pour l'horodatage UTC
@@ -14,16 +12,15 @@ import json
 def get_service_account_credentials():
     """Charge les credentials du compte de service GSheets."""
     try:
-        # 1. Copie du dictionnaire secrets (Solution à la TypeError)
-        gsheet_secrets = dict(st.secrets["gsheets"]) # <-- CRÉATION D'UNE COPIE MODIFIABLE
+        # CORRECTION NÉCESSAIRE : Copie pour éviter la TypeError
+        gsheet_secrets = dict(st.secrets["gsheets"]) 
         
-        # 2. Correction de la clé privée (maintenant autorisé sur la COPIE)
-        # La valeur de 'private_key' est une chaîne, et doit être modifiée.
+        # Correction de la clé privée
         gsheet_secrets["private_key"] = gsheet_secrets["private_key"].replace('\\n', '\n')
         
         return gsheet_secrets
     except KeyError as e:
-        print(f"DEBUG: La section 'gsheets' ou une clé manque dans secrets.toml: {e}")
+        print(f"DEBUG DB: La section 'gsheets' ou une clé manque dans secrets.toml: {e}")
         return None
 
 

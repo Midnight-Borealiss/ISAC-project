@@ -17,7 +17,15 @@ def get_agent_response(user_question: str, user_profile: str = "GUEST", username
     
     # --- 1. Vérification de la Base de Connaissances ---
     if not knowledge_base:
-        bot_response = "La base de connaissances n'a pas pu être chargée. Veuillez contacter l'administrateur."
+        # Utiliser l'erreur stockée ou le message par défaut
+        error_detail = st.session_state.get('knowledge_base_error', 'Impossible de déterminer la cause de l\'échec. Vérifiez les secrets/permissions.')
+        
+        # Afficher l'erreur détaillée UNIQUEMENT si l'utilisateur est un admin ou un testeur
+        if user_profile == "ADMINISTRATION" or user_profile == "Testeur":
+             bot_response = f"La base de connaissances n'a pas pu être chargée. (ADMIN DEBUG: {error_detail})"
+        else:
+             bot_response = "La base de connaissances n'a pas pu être chargée. Veuillez contacter l'administrateur."
+
         return bot_response, False
         
     # --- 2. Logique de Recherche Simple par Mot-Clé ---
