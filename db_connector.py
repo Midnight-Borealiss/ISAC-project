@@ -33,7 +33,11 @@ def get_service_account_credentials():
 def get_knowledge_base():
     """Charge la base de connaissances (onglet 'FAQ') depuis Google Sheets."""
     knowledge_base = []
-    
+    for entry in knowledge_base:
+            # VÉRIFIEZ L'ORTHOGRAPHE ICI
+            entry['question'] = entry.get('question', '') # <-- CORRESPOND À VOTRE COLONNE DANS SHEETS
+            entry['reponse'] = entry.get('reponse', '')  # <-- CORRESPOND À VOTRE COLONNE DANS SHEETS
+            entry['formulations'] = entry.get('formulations', '') # Si ce champ existe
     try:
         # 1. Authentification
         credentials = get_service_account_credentials()
