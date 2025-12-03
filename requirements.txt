@@ -1,7 +1,5 @@
 # requirements.txt
 streamlit
 pandas
+pyairtable
 pytz
-gspread
-oauth2client
-
