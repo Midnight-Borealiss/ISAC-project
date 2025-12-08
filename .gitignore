@@ -1,0 +1,11 @@
+# Dossiers de configuration de l'IDE Visual Studio
+.vs/
+*.sln.ide/
+
+# Environnements Virtuels Python
+env/
+venv/
+__pycache__/
+
+# Fichiers de données ou logs générés localement
+*.log

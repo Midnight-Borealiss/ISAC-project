@@ -1,112 +1,77 @@
+# logger.py
+
 from datetime import datetime
 import streamlit as st
-import pytz # À garder pour l'horodatage UTC
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import json
+from pyairtable import Table
+import pytz 
 
-# --- CONFIGURATION (Réutilisation de la fonction de db_connector) ---
-# NOTE: Dans un vrai projet, ces fonctions de secrets seraient dans un fichier 'config' partagé.
+# --- CONFIGURATION (Non modifiée) ---
+AIRTABLE_LOGS_STAGING = None
+AIRTABLE_NEW_QUESTIONS = None
+IS_READY = False
+# ... (Configuration Airtable/Secrets non modifiée)
 
-@st.cache_resource
-def get_service_account_credentials():
-    """Charge les credentials du compte de service GSheets."""
-    try:
-        # CORRECTION NÉCESSAIRE : Copie pour éviter la TypeError
-        gsheet_secrets = dict(st.secrets["gsheets"]) 
-        
-        # Correction de la clé privée
-        gsheet_secrets["private_key"] = gsheet_secrets["private_key"].replace('\\n', '\n')
-        
-        return gsheet_secrets
-    except KeyError as e:
-        print(f"DEBUG DB: La section 'gsheets' ou une clé manque dans secrets.toml: {e}")
-        return None
-
-
-# --- ACCÈS AUX DONNÉES EN ÉCRITURE (Logs) ---
-
-def log_to_gsheets(sheet_name: str, data: list):
-    """Écrit une ligne de données dans l'onglet spécifié."""
+try:
+    API_KEY = st.secrets["airtable"]["API_KEY"]
+    BASE_ID = st.secrets["airtable"]["BASE_ID"]
+    TABLE_STAGING = "Logs_Staging"
+    TABLE_NEW = st.secrets["airtable"]["TABLE_NEW_QUESTIONS"]
     
-    credentials = get_service_account_credentials()
-    if not credentials:
-        print(f"LOGS: Échec d'écriture dans GSheets. Credentials manquants.")
+    AIRTABLE_LOGS_STAGING = Table(API_KEY, BASE_ID, TABLE_STAGING)
+    AIRTABLE_NEW_QUESTIONS = Table(API_KEY, BASE_ID, TABLE_NEW)
+    IS_READY = True
+except Exception as e:
+    print(f"LOGGER ERROR: Configuration échouée: {e}")
+    IS_READY = False
+
+def safe_log(table, fields):
+    if not IS_READY or not table:
         return
-
     try:
-        # 1. Authentification
-        gc = gspread.service_account_from_dict(credentials)
-        
-        # 2. Ouverture du document et de l'onglet
-        sh = gc.open_by_url(st.secrets["gsheets"]["sheet_url"])
-        worksheet = sh.worksheet(sheet_name) # Nom de l'onglet
-
-        # 3. Écriture (append_row est la plus simple)
-        worksheet.append_row(data)
-        
+        table.create(fields)
     except Exception as e:
-        # Capture l'échec d'écriture (ex: noms de colonnes/permissions de partage)
-        print(f"==================================================================")
-        print(f"!!! ÉCHEC D'ÉCRITURE dans l'onglet '{sheet_name}' !!!")
-        print(f"CAUSE PROBABLE: Feuille non partagée avec le Compte de Service ou nom de colonnes/onglet erroné.")
-        print(f"ERREUR DÉTAILLÉE : {e}")
-        print(f"==================================================================")
+        print(f"LOGGER ERROR: Écriture échouée dans {table.table_name}: {e}")
 
-
-# --- FONCTIONS DE LOG APPLICATIVES ---
+# --- FONCTIONS PUBLIQUES ---
 
 def log_connection_event(event_type: str, username: str, name: str, profile: str):
-    """Enregistre un événement de connexion ou de déconnexion dans la table 'Logs'."""
-    # Les données sont envoyées sous forme de liste, dans l'ordre EXACT des colonnes de l'onglet 'Logs'.
-    # ORDRE DES COLONNES DANS VOTRE SHEET 'Logs' : Timestamp, Type, Email, Nom, Profile, Question, Réponse, Géré
-    
-    current_time_utc = datetime.now(pytz.utc).isoformat()
-    
-    # Remplir les colonnes Question/Réponse/Géré avec des valeurs vides pour un log de connexion
-    data = [
-        current_time_utc,
-        event_type, 
-        username,
-        name,
-        profile,
-        "",  # Question
-        "",  # Réponse
-        ""   # Géré
-    ]
-    log_to_gsheets("Logs", data)
+    """Log connexion/déconnexion vers Logs_Staging."""
+    fields = {
+        # MODIFICATION ICI : Utilisation de strftime pour un format lisible
+        "Timestamp": datetime.now(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S'), 
+        "Type": str(event_type),
+        "Email": str(username),
+        "Nom": str(name),
+        "Profile": str(profile),
+        "Question": "",
+        "Réponse": "",
+        "Géré": "False"
+    }
+    safe_log(AIRTABLE_LOGS_STAGING, fields)
 
-
-def log_interaction(user_question: str, bot_response: str, is_handled: bool, profile: str = "GUEST", username: str = "unknown"):
-    """Enregistre une interaction (question/réponse) dans la table 'Logs'."""
-    # ORDRE DES COLONNES DANS VOTRE SHEET 'Logs' : Timestamp, Type, Email, Nom, Profile, Question, Réponse, Géré
-    
-    current_time_utc = datetime.now(pytz.utc).isoformat()
-    
-    data = [
-        current_time_utc,
-        "INTERACTION",
-        username,
-        "", # Nom (non utilisé dans log_interaction)
-        profile,
-        user_question,
-        bot_response,
-        str(is_handled) # Le booléen doit être converti en texte
-    ]
-    log_to_gsheets("Logs", data)
-
+def log_interaction(user_question: str, bot_response: str, is_handled: bool, profile: str, username: str):
+    """Log interaction vers Logs_Staging."""
+    fields = {
+        # MODIFICATION ICI : Utilisation de strftime pour un format lisible
+        "Timestamp": datetime.now(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S'), 
+        "Type": "INTERACTION",
+        "Email": str(username),
+        "Nom": st.session_state.get("name", ""),
+        "Profile": str(profile),
+        "Question": str(user_question),
+        "Réponse": str(bot_response),
+        "Géré": str(is_handled) 
+    }
+    safe_log(AIRTABLE_LOGS_STAGING, fields)
 
 def log_unhandled_question(user_question: str, profile: str, username: str):
-    """Enregistre les questions sans réponse trouvée dans la table 'New_Questions'."""
-    # ORDRE DES COLONNES DANS VOTRE SHEET 'New_Questions' : Date, Question, Email, Profile, Statut
-    
-    current_time_utc = datetime.now(pytz.utc).isoformat()
-    
-    data = [
-        current_time_utc,
-        user_question, 
-        username,
-        profile,
-        "À traiter"
-    ]
-    log_to_gsheets("New_Questions", data)
+    """Log question non traitée vers New_Questions."""
+    fields = {
+        # MODIFICATION ICI : Utilisation de strftime pour un format lisible
+        "Date": datetime.now(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S'),
+        "Question": str(user_question),
+        "Email": str(username),
+        "Profile": str(profile),
+        "Statut": "À Traiter"
+    }
+    safe_log(AIRTABLE_NEW_QUESTIONS, fields)
