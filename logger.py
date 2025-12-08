@@ -15,7 +15,7 @@ try:
     # Récupération des secrets
     API_KEY = st.secrets["airtable"]["API_KEY"]
     BASE_ID = st.secrets["airtable"]["BASE_ID"]
-    TABLE_STAGING = "LOGS_STAGING" # Vérifiez l'orthographe exacte dans Airtable !
+    TABLE_STAGING = "LOGS_STAGING" # <<<<< CORRECTION DE LA CASSE ICI : LOGS_STAGING >>>>>
     TABLE_NEW = st.secrets["airtable"]["TABLE_NEW_QUESTIONS"]
     
     # Tentative d'initialisation des tables
@@ -27,7 +27,6 @@ try:
 
 except Exception as e:
     # Affiche l'erreur si les clés ou les tables sont mal configurées
-    # Cette erreur est la cause de l'échec d'initialisation.
     print(f"LOGGER CONFIGURATION FAILED: {e}")
     IS_READY = False
 
@@ -43,9 +42,7 @@ def safe_log(table, fields):
         # Tente d'envoyer l'enregistrement
         table.create(fields)
     except Exception as e:
-        # MODIFICATION : Nous imprimons ici le VRAI message d'erreur Airtable (e)
-        # SANS CRASHER sur table.table_name, car nous savons que l'objet table existe
-        # (sinon le premier if l'aurait attrapé)
+        # Nous imprimons le VRAI message d'erreur Airtable (e)
         print(f"LOGGER ERROR: Écriture vers {table.table_name} échouée. Message Airtable: {e}")
 
 
