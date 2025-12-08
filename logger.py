@@ -15,7 +15,7 @@ try:
     # Récupération des secrets
     API_KEY = st.secrets["airtable"]["API_KEY"]
     BASE_ID = st.secrets["airtable"]["BASE_ID"]
-    TABLE_STAGING = "LOGS_STAGING" # <<<<< CORRECTION DE LA CASSE ICI : LOGS_STAGING >>>>>
+    TABLE_STAGING = "LOGS_STAGING"
     TABLE_NEW = st.secrets["airtable"]["TABLE_NEW_QUESTIONS"]
     
     # Tentative d'initialisation des tables
@@ -57,7 +57,7 @@ def log_connection_event(event_type: str, username: str, name: str, profile: str
         "Profile": str(profile),
         "Question": "",
         "Réponse": "",
-        "Géré": "False"
+        "Géré": False # <--- CORRECTION 1 : Booléen natif False
     }
     safe_log(AIRTABLE_LOGS_STAGING, fields)
 
@@ -70,7 +70,7 @@ def log_interaction(user_question: str, bot_response: str, is_handled: bool, pro
         "Profile": str(profile),
         "Question": str(user_question),
         "Réponse": str(bot_response),
-        "Géré": str(is_handled) 
+        "Géré": is_handled # <--- CORRECTION 2 : Utilise le booléen is_handled (True ou False)
     }
     safe_log(AIRTABLE_LOGS_STAGING, fields)
 
