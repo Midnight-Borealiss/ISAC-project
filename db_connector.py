@@ -11,7 +11,7 @@ try:
     FAQ_TABLE_NAME = st.secrets["airtable"]["TABLE_FAQ"]
     
     # Noms des tables pour les logs (Staging pour l'écriture, Logs réels pour la lecture dashboard)
-    LOGS_STAGING_TABLE_NAME = "Logs_Staging" 
+    LOGS_STAGING_TABLE_NAME = "LOGS_STAGING" 
     LOGS_REAL_TABLE_NAME = st.secrets["airtable"]["TABLE_LOGS"]
     NEW_QUESTIONS_TABLE_NAME = st.secrets["airtable"]["TABLE_NEW_QUESTIONS"]
 except KeyError:

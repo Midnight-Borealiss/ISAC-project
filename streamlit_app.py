@@ -15,14 +15,12 @@ USER_PROFILES_RULES = {
         "votre.email@admin",
         "votre.email@gmail.com"
     ],
-    "ENSEIGNANT": [
-        "votre.email@prof"
-    ],
+
     "ÉTUDIANT":[
         "votre.email@edu"
     ]
 }
-DEFAULT_PROFILE = "Testeur"
+DEFAULT_PROFILE = "Étudiant"
 
 
 # --- Configuration de la Page Streamlit ---
@@ -79,7 +77,7 @@ def render_login_page():
     
     with st.form("access_form"):
         user_name = st.text_input("Votre Nom/Pseudonyme", key="input_name")
-        user_email = st.text_input("Votre Email (ex: votre.email@edu, votre.email@prof, votre.email@admin)", key="input_email")
+        user_email = st.text_input("Votre Email (ex: votre.email@edu, votre.email@admin)", key="input_email")
         
         submitted = st.form_submit_button("Démarrer le Chat")
         
@@ -115,7 +113,7 @@ def render_chatbot_page():
     st.sidebar.markdown(f"**Utilisateur:** {st.session_state['name']}")
     st.sidebar.button('Changer d\'utilisateur 🚪', on_click=logout)
     
-    st.title("Chatbot ISMAILA - Aide Étudiant")
+    st.title("Chatbot ISMAILA - Assistant Étudiant")
     
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
