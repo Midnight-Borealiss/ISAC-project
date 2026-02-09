@@ -1,41 +1,23 @@
-# admin_dashboard.py
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-from db_connector import get_logs_data, get_unhandled_questions 
+from db_connector import mongo_db
 
 def render_admin_dashboard():
-    st.title("Tableau de Bord Administration ??")
+    st.title("Tableau de Bord Administration 📊")
 
-    logs_df = get_logs_data()
-    questions_df = get_unhandled_questions()
+    logs_df = mongo_db.get_logs_data()
+    questions_df = mongo_db.get_unhandled_questions()
 
     if logs_df.empty:
-        st.info("Aucune donnée de Log disponible.")
+        st.info("Aucune donnée disponible sur MongoDB.")
         return
         
     # KPI
-    st.header("Performance")
-    interactions = logs_df[logs_df['Type'] == 'INTERACTION']
-    total = len(interactions)
-    # Conversion sure si Airtable envoie des chaines ou des booléens
-    # On suppose que la colonne 'Géré' est un Checkbox (True/False) ou texte
-    if 'Géré' in interactions.columns:
-        success = interactions['Géré'].apply(lambda x: True if x == True or str(x).lower() == 'true' else False).sum()
-    else:
-        success = 0
+    total = len(logs_df)
+    success = logs_df[logs_df['is_handled'] == True].shape[0] if 'is_handled' in logs_df.columns else 0
         
     col1, col2 = st.columns(2)
     col1.metric("Total Interactions", total)
-    col2.metric("Taux de Succés", f"{(success/total):.1%}" if total else "0%")
+    col2.metric("Taux de Succès", f"{(success/total):.1%}" if total else "0%")
 
-    # Questions � traiter
-    st.header("Questions à Traiter")
-    if not questions_df.empty:
-        st.dataframe(questions_df)
-    else:
-        st.success("Aucune question en attente.")
-
-    # Logs
-    st.header("Historique")
+    st.header("Historique des Logs")
     st.dataframe(logs_df)

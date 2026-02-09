@@ -1,131 +1,94 @@
-# streamlit_app.py (VERSION FINALE SANS YAML)
-
+# streamlit_app.py
 import streamlit as st
-import time 
+from agent import ismaila_agent
+from logger import db_logger
+from admin_dashboard import render_admin_dashboard
 
-from agent import get_agent_response
-from logger import log_connection_event 
-
-
-
-# --- DÉFINITION DES RÈGLES DE PROFIL (Anciennement config.yaml) ---
-# Les emails doivent être en minuscules pour garantir la correspondance
+# --- CONFIGURATION DES PROFILS ---
 USER_PROFILES_RULES = {
-    "ADMINISTRATION": [
-        "votre.email@admin",
-        "votre.email@gmail.com"
-    ],
-
-    "ÉTUDIANT":[
-        "votre.email@edu"
-    ]
+    "ADMINISTRATION": ["votre.email@admin", "votre.email@gmail.com", "ismaila.admin@uam.sn"],
+    "ÉTUDIANT": ["votre.email@edu", "etudiant@uam.sn"]
 }
 DEFAULT_PROFILE = "Étudiant"
 
+st.set_page_config(page_title="ISMaiLa - Assistant Virtuel", layout="wide")
 
-# --- Configuration de la Page Streamlit ---
-st.set_page_config(page_title="Assistant ISMaiLa", layout="wide")
-
-
-
-# --- Initialisation des États de Session ---
+# --- GESTION DE LA SESSION ---
 if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
-if "username" not in st.session_state:
-    st.session_state["username"] = None 
-if "name" not in st.session_state:
-    st.session_state["name"] = None
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "user_profile" not in st.session_state: 
-    st.session_state.user_profile = DEFAULT_PROFILE
-
-
-# --- Fonctions de Gestion de Profil et Vues ---
-
-def get_user_profile_from_email(user_email):
-    """Détermine le profil basé sur l'email saisi et les règles codées."""
-    user_email_lower = user_email.lower().strip()
-    
-    for profile, emails in USER_PROFILES_RULES.items():
-        if user_email_lower in [e.lower().strip() for e in emails]:
-            return profile
-            
-    # Retourne le profil par défaut
-    return DEFAULT_PROFILE
+    st.session_state.update({
+        "logged_in": False,
+        "username": None,
+        "name": None,
+        "messages": [],
+        "user_profile": DEFAULT_PROFILE
+    })
 
 def logout():
-    """Déconnecte l'utilisateur et journalise l'événement."""
-    log_connection_event(
-        event_type="LOGOUT",
-        username=st.session_state.username,
-        name=st.session_state.name,
-        profile=st.session_state.user_profile
-    )
-    
-    st.session_state["logged_in"] = False
-    st.session_state["username"] = None
-    st.session_state["name"] = None
-    st.session_state.messages = []
-    st.session_state.user_profile = DEFAULT_PROFILE
+    st.session_state.logged_in = False
     st.rerun()
 
-def render_login_page():
-    """Affiche la page de saisie du pseudonyme et de l'email."""
-    st.title("Bienvenue sur la page de l'assistant ISMaiLa 👤")
-    st.markdown("Veuillez saisir votre nom et votre email pour démarrer la conversation.")
-    
-    with st.form("access_form"):
-        user_name = st.text_input("Votre Nom/Pseudonyme", key="input_name")
-        user_email = st.text_input("Votre Email (ex: votre.email@edu, votre.email@admin)", key="input_email")
-        
-        submitted = st.form_submit_button("Démarrer le Chat")
-        
-        if submitted:
-            if not user_name or "@" not in user_email:
-                st.error("Veuillez remplir le nom et saisir un email valide.")
-            else:
-                with st.spinner("Vérification du profil..."):
-                    time.sleep(0.5) 
-                    
-                user_profile = get_user_profile_from_email(user_email)
-                
-                st.session_state.logged_in = True
-                st.session_state.username = user_email
-                st.session_state.name = user_name
-                st.session_state.user_profile = user_profile 
-                
-                # JOURNALISER LA CONNEXION
-                log_connection_event(
-                    event_type="LOGIN",
-                    username=user_email,
-                    name=user_name,
-                    profile=user_profile
-                )
-                
-                st.session_state.messages.append({"role": "assistant", "content": f"Salut {user_name} ! Comment puis-je vous aider ?"})
-                st.rerun() 
+def get_user_profile(email):
+    email = email.lower()
+    for profile, keywords in USER_PROFILES_RULES.items():
+        if any(kw in email for kw in keywords):
+            return profile
+    return DEFAULT_PROFILE
 
+# --- VUES ---
+
+def render_login_page():
+    st.title("🎓 Connexion ISMaiLa")
+    st.markdown("Bienvenue sur l'assistant intelligent de l'UAM.")
+    
+    with st.form("login_form"):
+        user_name = st.text_input("Prénom & Nom")
+        user_email = st.text_input("Email Institutionnel")
+        submit = st.form_submit_button("Se connecter")
+        
+        if submit:
+            if user_email and user_name:
+                user_profile = get_user_profile(user_email)
+                st.session_state.update({
+                    "logged_in": True,
+                    "username": user_email,
+                    "name": user_name,
+                    "user_profile": user_profile
+                })
+                # Log de connexion (POO)
+                db_logger.log_connection_event("LOGIN", user_email, user_name, user_profile)
+                st.rerun()
+            else:
+                st.error("Veuillez remplir tous les champs.")
 
 def render_chatbot_page():
-    """Affiche l'interface du chatbot."""
+    # Sidebar
+    st.sidebar.title("🛠️ Menu")
+    st.sidebar.info(f"Connecté en tant que :\n**{st.session_state.name}**\n({st.session_state.user_profile})")
     
-    st.sidebar.markdown(f"**Utilisateur:** {st.session_state['name']}")
-    st.sidebar.button('Changer d\'utilisateur 🚪', on_click=logout)
-    
-    st.title("Chatbot ISMAILA - Assistant Étudiant")
-    
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    if st.session_state.user_profile == "ADMINISTRATION":
+        mode = st.sidebar.radio("Navigation", ["Chatbot", "Dashboard Admin"])
+        if mode == "Dashboard Admin":
+            render_admin_dashboard()
+            return
 
-    if prompt := st.chat_input("Posez votre question..."):
+    if st.sidebar.button('Déconnexion 🚪'):
+        logout()
+    
+    # Interface Chat
+    st.title("💬 Assistant ISMaiLa")
+    
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    if prompt := st.chat_input("Posez votre question à ISMaiLa..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        with st.spinner("Recherche de la réponse..."):
-            response, is_handled = get_agent_response(
+        with st.spinner("ISMAILA analyse votre demande..."):
+            # Appel à l'objet agent (POO)
+            response, _ = ismaila_agent.get_response(
                 prompt, 
                 st.session_state.user_profile,
                 st.session_state.username
@@ -133,13 +96,10 @@ def render_chatbot_page():
             
             with st.chat_message("assistant"):
                 st.markdown(response)
-                
             st.session_state.messages.append({"role": "assistant", "content": response})
 
-
-# --- Logique Principale d'Affichage ---
-
-if st.session_state.logged_in:
-    render_chatbot_page()
-else:
+# --- LOGIQUE PRINCIPALE ---
+if not st.session_state.logged_in:
     render_login_page()
+else:
+    render_chatbot_page()
