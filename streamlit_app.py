@@ -8,7 +8,7 @@ USER_PROFILES_RULES = {
     "ADMINISTRATION": ["minawade005gmail.com"],
     "ÉTUDIANT": ["votre.email@ism.edu.sn"]
 }
-DEFAULT_PROFILE = "ADMINISTRATION"
+DEFAULT_PROFILE = "ÉTUDIANT"
 
 st.set_page_config(page_title="ISMaiLa - Assistant Virtuel", layout="wide")
 
@@ -28,10 +28,15 @@ def logout():
     st.rerun()
 
 def get_user_profile(email):
-    email = email.lower()
+    # .strip() enlève les espaces accidentels au début ou à la fin
+    # .lower() transforme tout en minuscules pour éviter les erreurs "Mina@..."
+    clean_email = email.strip().lower()
+    
     for profile, keywords in USER_PROFILES_RULES.items():
-        if any(kw in email for kw in keywords):
-            return profile
+        for kw in keywords:
+            # On vérifie si le mot-clé est contenu dans l'email
+            if kw.lower() in clean_email:
+                return profile
     return DEFAULT_PROFILE
 
 # --- VUES ---
