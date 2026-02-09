@@ -37,9 +37,8 @@ def get_user_profile(email):
 # --- VUES ---
 
 def render_login_page():
-    st.title("🎓 Connexion ISMaiLa")
-    st.markdown("Bienvenue sur l'assistant intelligent de l'UAM.")
-    
+    st.title("🎓 Bienvenue sur l'assistant intelligent du Groupe ISM.")
+    st.markdown("Veuillez saisir votre nom et votre email pour démarrer la conversation.👤")
     with st.form("login_form"):
         user_name = st.text_input("Prénom & Nom")
         user_email = st.text_input("Email Institutionnel")
@@ -75,8 +74,10 @@ def render_chatbot_page():
         logout()
     
     # Interface Chat
-    st.title("💬 Assistant ISMaiLa")
-    
+    st.title("💬 Votre Assistant ISMaiLa à votre service")
+    st.markdown("Bienvenue sur l'assistant intelligent du Groupe ISM.")
+    st.session_state.messages.append({"role": "assistant", "content": f"Salut {st.session_state.name} ! Comment puis-je vous aider ?"})
+    st.rerun()
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
