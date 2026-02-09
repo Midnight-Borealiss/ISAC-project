@@ -1,8 +1,8 @@
 import streamlit as st
 from db_connector import mongo_db
 from agent import ismaila_agent
-from app.views.contribution_view import render_contribution_page
-from app.views.admin_view import render_admin_page
+from modules.contribution.view import render_contribution
+from modules.admin.admin_view import render_admin
 
 # --- CONFIGURATION ---
 USER_PROFILES_RULES = {
