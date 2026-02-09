@@ -1,36 +1,30 @@
+import st
 from db_connector import mongo_db
-from logger import db_logger
 
 class IsmailaAgent:
-    def __init__(self):
-        self.default_fallback = "Désolé, je n'ai pas trouvé de réponse. Je l'ai notée pour mes créateurs."
+    def get_response(self, user_query, user_profile, user_email):
+        """
+        Cherche d'abord une réponse validée dans MongoDB.
+        Si rien n'est trouvé, l'IA prend le relais.
+        """
+        # Recherche simple par mot-clé dans les contributions validées
+        match = mongo_db.contributions.find_one({
+            "status": "valide",
+            "question": {"$regex": user_query, "$options": "i"}
+        })
 
-    def get_response(self, user_question, user_profile="GUEST", username="unknown"):
-        processed_q = user_question.lower().strip()
-        knowledge_base = mongo_db.get_knowledge_base()
+        if match:
+            # On enregistre que le bot a trouvé une réponse validée
+            mongo_db.log_event("CHAT_SUCCESS_DB", user_email, "System", f"Match: {match['_id']}")
+            return f"✅ **Réponse Officielle :**\n\n{match['response']}", "database"
+
+        # LOGIQUE IA (À adapter selon ton modèle : OpenAI ou Gemini)
+        # Ici, on simule une réponse si rien n'est trouvé en base
+        response_ia = "Désolé, je n'ai pas de réponse officielle à ce sujet. Je transmets votre question aux contributeurs !"
         
-        best_match = None
+        # Enregistre que l'IA a été sollicitée
+        mongo_db.log_event("CHAT_IA_FALLBACK", user_email, "System", f"Q: {user_query}")
         
-        # Logique de recherche (MongoDB version)
-        for entry in knowledge_base:
-            # Dans MongoDB, on suppose que tes questions sont dans une liste 'questions'
-            questions_list = entry.get('questions', [])
-            if any(processed_q in q.lower() for q in questions_list):
-                best_match = entry.get('answer')
-                break
+        return response_ia, "llm"
 
-        if best_match:
-            response = best_match
-            is_handled = True
-        else:
-            response = self.default_fallback
-            is_handled = False
-            db_logger.log_unhandled_question(user_question, user_profile, username)
-
-        # Log final
-        db_logger.log_interaction(username, user_question, response, is_handled, user_profile, username)
-        
-        return response, is_handled
-
-# Instance unique
 ismaila_agent = IsmailaAgent()

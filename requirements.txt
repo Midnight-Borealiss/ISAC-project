@@ -1,5 +1,6 @@
 streamlit
 pymongo
-python-dotenv
 pandas
-dnspython
+python-dotenv
+openai
+google-generativeai
