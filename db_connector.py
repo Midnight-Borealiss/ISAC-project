@@ -51,3 +51,10 @@ class MongoManager:
 
 # Instance unique pour l'app
 mongo_db = MongoManager()
+
+client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000) # 5 secondes max
+try:
+    client.admin.command('ping')
+    print("✅ MongoDB Connected")
+except Exception as e:
+    print(f"❌ Connection error: {e}")
