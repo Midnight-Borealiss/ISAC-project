@@ -4,7 +4,6 @@ from logger import db_logger
 from admin_dashboard import render_admin_dashboard
 
 # --- CONFIGURATION DES PROFILS ---
-# Ajoute tes emails admin ici
 USER_PROFILES_RULES = {
     "ADMINISTRATION": ["votre.email@admin", "votre.email@gmail.com", "ismaila.admin@uam.sn"],
     "ÉTUDIANT": ["votre.email@edu", "etudiant@uam.sn"]
@@ -24,7 +23,6 @@ if "logged_in" not in st.session_state:
     })
 
 def logout():
-    # On réinitialise tout proprement
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.rerun()
@@ -40,8 +38,7 @@ def get_user_profile(email):
 
 def render_login_page():
     st.title("🎓 Bienvenue sur l'assistant intelligent du Groupe ISM.")
-    st.markdown("Veuillez saisir votre nom et votre email pour démarrer la conversation. 👤")
-    
+    st.markdown("Veuillez saisir votre nom et votre email pour démarrer la conversation.👤")
     with st.form("login_form"):
         user_name = st.text_input("Prénom & Nom")
         user_email = st.text_input("Email Institutionnel")
@@ -56,18 +53,17 @@ def render_login_page():
                     "name": user_name,
                     "user_profile": user_profile
                 })
-                # Log de connexion via MongoDB
+                # Log de connexion
                 db_logger.log_connection_event("LOGIN", user_email, user_name, user_profile)
                 st.rerun()
             else:
                 st.error("Veuillez remplir tous les champs.")
 
 def render_chatbot_page():
-    # 1. Barre Latérale (Sidebar)
+    # 1. Sidebar
     st.sidebar.title("🛠️ Menu")
     st.sidebar.info(f"Connecté en tant que :\n**{st.session_state.name}**\n({st.session_state.user_profile})")
     
-    # Navigation pour les Admins
     if st.session_state.user_profile == "ADMINISTRATION":
         mode = st.sidebar.radio("Navigation", ["Chatbot", "Dashboard Admin"])
         if mode == "Dashboard Admin":
@@ -77,30 +73,30 @@ def render_chatbot_page():
     if st.sidebar.button('Déconnexion 🚪'):
         logout()
     
-    # 2. Interface de Chat
+    # 2. Interface Chat
     st.title("💬 Votre Assistant ISMaiLa à votre service")
     st.markdown("Bienvenue sur l'assistant intelligent du Groupe ISM.")
 
-    # Initialisation du message d'accueil (Une seule fois !)
-    if not st.session_state.messages:
+    # --- LA CORRECTION EST ICI ---
+    # On ajoute le message d'accueil UNIQUEMENT si la liste est vide
+    if len(st.session_state.messages) == 0:
         st.session_state.messages.append({
             "role": "assistant", 
-            "content": f"Salut {st.session_state.name} ! Je suis ISMaiLa. Comment puis-je vous aider aujourd'hui ?"
+            "content": f"Salut {st.session_state.name} ! Comment puis-je vous aider ?"
         })
+    # -----------------------------
 
-    # Affichage de l'historique des messages
+    # Affichage de l'historique
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # Zone de saisie utilisateur
+    # Zone de saisie
     if prompt := st.chat_input("Posez votre question à ISMaiLa..."):
-        # Ajouter le message utilisateur
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Réponse de l'Agent
         with st.spinner("ISMAILA analyse votre demande..."):
             response, _ = ismaila_agent.get_response(
                 prompt, 
@@ -110,8 +106,6 @@ def render_chatbot_page():
             
             with st.chat_message("assistant"):
                 st.markdown(response)
-            
-            # Sauvegarde de la réponse dans l'historique
             st.session_state.messages.append({"role": "assistant", "content": response})
 
 # --- LOGIQUE PRINCIPALE ---
