@@ -1,7 +1,5 @@
 streamlit
+pymongo
+python-dotenv
 pandas
-pyairtable
-pytz
-plotly
-pymongo 
 dnspython
