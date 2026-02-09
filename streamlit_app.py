@@ -5,8 +5,8 @@ from admin_dashboard import render_admin_dashboard
 
 # --- CONFIGURATION DES PROFILS ---
 USER_PROFILES_RULES = {
-    "ADMINISTRATION": ["votre.email@admin", "votre.email@gmail.com", "ismaila.admin@uam.sn"],
-    "ÉTUDIANT": ["votre.email@edu", "etudiant@uam.sn"]
+    "ADMINISTRATION": ["votre.email@admin", "votre.email@gmail.com", "minawade005gmail.com"],
+    "ÉTUDIANT": ["votre.email@edu", "etudiant@ism.sn"]
 }
 DEFAULT_PROFILE = "ÉTUDIANT"
 
