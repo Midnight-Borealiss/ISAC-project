@@ -3,7 +3,16 @@ import pandas as pd
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
-load_dotenv()
+# Charge le .env seulement s'il existe (local)
+# En ligne, Streamlit utilisera ses propres "Secrets"
+if os.path.exists(".env"):
+    load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI")
+
+# Test de sécurité pour éviter le chargement infini
+if not MONGO_URI:
+    raise ValueError("MONGO_URI non trouvée ! Vérifiez les Secrets Streamlit.")
 
 class MongoManager:
     def __init__(self):
