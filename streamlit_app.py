@@ -5,10 +5,10 @@ from admin_dashboard import render_admin_dashboard
 
 # --- CONFIGURATION DES PROFILS ---
 USER_PROFILES_RULES = {
-    "ADMINISTRATION": ["votre.email@admin", "votre.email@gmail.com", "minawade005gmail.com"],
-    "ÉTUDIANT": ["votre.email@edu", "etudiant@ism.sn"]
+    "ADMINISTRATION": ["minawade005gmail.com"],
+    "ÉTUDIANT": ["votre.email@ism.edu.sn"]
 }
-DEFAULT_PROFILE = "ÉTUDIANT"
+DEFAULT_PROFILE = "ADMINISTRATION"
 
 st.set_page_config(page_title="ISMaiLa - Assistant Virtuel", layout="wide")
 
