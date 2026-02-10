@@ -1,6 +1,8 @@
 import streamlit as st
 from db_connector import mongo_db
 from agent import ismaila_agent
+
+# On importe les vues depuis le nouveau dossier modules
 from modules.contribution.view import render_contribution
 from modules.admin.admin_view import render_admin
 
