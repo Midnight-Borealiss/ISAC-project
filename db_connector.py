@@ -4,6 +4,26 @@ from datetime import datetime
 from bson import ObjectId
 import streamlit as st
 
+# Récupération de l'URI depuis les secrets de Streamlit
+try:
+    # Dans Streamlit Cloud, on utilise st.secrets
+    MONGO_URI = st.secrets["MONGO_URI"]
+    client = MongoClient(MONGO_URI)
+    # On définit mongo_db pour qu'il soit exportable
+    mongo_db = client["ismaila_db"] 
+    
+    # Test de connexion rapide
+    client.admin.command('ping')
+except Exception as e:
+    st.error(f"Erreur de connexion MongoDB : {e}")
+    mongo_db = None
+
+try:
+    mongo_db.command('ping')
+    print("✅ Connexion MongoDB réussie")
+except Exception as e:
+    print(f"❌ Erreur MongoDB : {e}")
+
 class MongoManager:
     def __init__(self):
         # Récupère l'URI de connexion depuis les secrets Streamlit (Cloud) ou variables d'environnement (Local)
