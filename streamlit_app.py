@@ -11,7 +11,7 @@ from agent import ismaila_agent
 from logger import db_logger
 from modules.contribution.view import render_contribution_page
 from modules.admin.admin_view import render_admin_page
-from modules.help.view import render_help_page # Un seul import propre ici
+from modules.help.help_view import render_help_page # Un seul import propre ici
 
 # --- CONFIGURATION ---
 ADMIN_EMAILS = ["minawade005@gmail.com", "ismaila.admin@uam.sn"]
