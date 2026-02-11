@@ -3,32 +3,22 @@ import streamlit as st
 from db_connector import mongo_db
 
 class IsmailaAgent:
-    def get_response(self, user_query, user_profile, user_email):
-        """
-        Cherche d'abord une réponse validée dans MongoDB.
-        Si rien n'est trouvé, l'IA prend le relais.
-        """
-        try:
-            # Recherche simple par mot-clé dans les contributions validées
-            match = mongo_db.contributions.find_one({
-                "status": "valide",
-                "question": {"$regex": user_query, "$options": "i"}
-            })
-
-            if match:
-                # Log du succès en base
-                mongo_db.log_event("CHAT_SUCCESS_DB", user_email, "System", f"Match ID: {match['_id']}")
-                return f"✅ **Réponse Officielle :**\n\n{match['response']}", "database"
+    def get_response(self, user_query, user_profile, username):
+        """Recherche une réponse validée dans MongoDB"""
         
-        except Exception as e:
-            print(f"Erreur recherche DB: {e}")
+        # 1. On cherche une correspondance exacte ou partielle dans les questions validées
+        # On ignore les questions "en_attente" pour garantir la qualité
+        match = mongo_db.contributions.find_one({
+            "question": {"$regex": user_query, "$options": "i"},
+            "status": "validé"  # <--- LE FILTRE CRUCIAL
+        })
 
-        # LOGIQUE IA (Fallback si rien n'est trouvé en base)
-        response_ia = "Je n'ai pas encore de réponse officielle pour cette question, mais je la transmets à nos contributeurs ! En attendant, n'hésitez pas à explorer l'onglet Contribution."
-        
-        # Enregistre que l'IA a été sollicitée
-        mongo_db.log_event("CHAT_IA_FALLBACK", user_email, "System", f"Q: {user_query}")
-        
-        return response_ia, "llm"
+        if match and match.get("response"):
+            return match["response"], "Base de connaissances interne"
 
+        # 2. Si pas de match, on peut basculer sur l'IA (LLM) ou une réponse par défaut
+        # Ici, tu peux appeler OpenAI, Gemini ou ton propre moteur RAG
+        return "Je n'ai pas encore de réponse validée pour cette question, mais je la transmets à mes administrateurs !", "IA ISMaiLa"
+
+# Instance pour l'import
 ismaila_agent = IsmailaAgent()

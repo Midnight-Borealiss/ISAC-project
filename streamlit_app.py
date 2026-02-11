@@ -1,63 +1,116 @@
+import streamlit as st
 import os
 import sys
-import streamlit as st
+import pandas as pd
 
-# --- CORRECTIF DE CHEMIN (PATH FIX) ---
-# Indispensable pour que Python trouve le dossier 'modules'
-root_path = os.path.dirname(os.path.abspath(__file__))
-if root_path not in sys.path:
-    sys.path.insert(0, root_path)
+# --- FIX DES CHEMINS ---
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# --- IMPORTS DES SERVICES ET AGENTS ---
 from db_connector import mongo_db
-from agent import ismaila_agent
-
-# --- IMPORTS MODULAIRES (VUES) ---
-# On utilise les noms de fonctions définis dans nos nouveaux fichiers
+# À insérer juste après l'import de mongo_db
 try:
-    from modules.chatbot.chat_view import render_chat
-    from modules.contribution.view import render_contribution
-    from modules.admin.admin_view import render_admin
-except ImportError as e:
-    st.error(f"Erreur de chargement des modules : {e}")
-    st.stop()
+    # On teste si on peut compter les documents
+    count = mongo_db.contributions.count_documents({})
+    st.sidebar.success(f"📡 MongoDB Connecté ({count} contribs)")
+except Exception as e:
+    st.sidebar.error(f"📡 Erreur MongoDB : {e}")
+from agent import ismaila_agent
+from modules.contribution.view import render_contribution_page
+from modules.admin.admin_view import render_admin_page
 
-# --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="ISMaiLa", page_icon="🎓", layout="wide")
+# --- CONFIGURATION ---
+USER_PROFILES_RULES = {
+    "ADMINISTRATION": ["mina@gmail.com", "ismaila.admin@uam.sn"],
+    "ÉTUDIANT": ["@edu.uam.sn", "@uam.sn"]
+}
+DEFAULT_PROFILE = "ÉTUDIANT"
 
-# (Ici, place ton code de gestion de session / Login habituel)
-# Imaginons que ton utilisateur est déjà connecté pour la logique ci-dessous :
+st.set_page_config(page_title="ISMaiLa - Assistant Virtuel", layout="wide", page_icon="🎓")
 
-def render_main_interface():
-    """Gère la navigation entre les différents modules"""
-    
-    st.sidebar.title("📌 Navigation")
-    
-    # Définition des modes selon le profil
-    modes = ["💬 Chatbot"]
-    if st.session_state.get('user_profile') == "ADMINISTRATION":
-        modes.append("🛡️ Administration")
-    modes.append("🌍 Contribution")
-    
-    mode = st.sidebar.radio("Aller vers :", modes)
+# --- GESTION DE LA SESSION ---
+if "logged_in" not in st.session_state:
+    st.session_state.update({
+        "logged_in": False,
+        "username": None,
+        "name": None,
+        "messages": [],
+        "user_profile": DEFAULT_PROFILE
+    })
 
-    # --- ROUTAGE DES VUES ---
-    if mode == "🛡️ Administration":
-        # On appelle 'render_admin' (et non render_admin_page)
-        render_admin() 
+def logout():
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.rerun()
+
+def get_user_profile(email):
+    clean_email = email.strip().lower()
+    for profile, keywords in USER_PROFILES_RULES.items():
+        for kw in keywords:
+            if kw.lower() in clean_email:
+                return profile
+    return DEFAULT_PROFILE
+
+# --- VUES ---
+
+def render_login_page():
+    st.title("🎓 Bienvenue sur l'assistant intelligent du Groupe ISM.")
+    st.markdown("Veuillez saisir votre nom et votre email pour démarrer la conversation.👤")
+    with st.form("login_form"):
+        user_name = st.text_input("Prénom ou Pseudonyme")
+        user_email = st.text_input("Email Institutionnel")
+        submit = st.form_submit_button("Se connecter")
         
+        if submit:
+            if user_email and user_name:
+                user_profile = get_user_profile(user_email)
+                st.session_state.update({
+                    "logged_in": True,
+                    "username": user_email,
+                    "name": user_name,
+                    "user_profile": user_profile
+                })
+                # Log de connexion
+                mongo_db.logs.insert_one({
+                    "event": "LOGIN", 
+                    "user": user_email, 
+                    "timestamp": pd.Timestamp.now()
+                })
+                st.rerun()
+            else:
+                st.error("Veuillez remplir tous les champs.")
+
+def render_chatbot_page():
+    st.sidebar.title("🛠️ Menu")
+    st.sidebar.info(f"Connecté : **{st.session_state.name}**\n({st.session_state.user_profile})")
+    
+    menu_options = ["💬 Chatbot", "🌍 Contribution"]
+    if st.session_state.user_profile == "ADMINISTRATION":
+        menu_options.append("🛡️ Dashboard Admin")
+    
+    mode = st.sidebar.radio("Navigation", menu_options)
+
+    if st.sidebar.button('Déconnexion 🚪'):
+        logout()
+    
+    if mode == "🛡️ Dashboard Admin":
+        render_admin_page()
     elif mode == "🌍 Contribution":
-        # On appelle 'render_contribution' (et non render_contribution_page)
-        render_contribution() 
-        
+        render_contribution_page()
     else:
-        # On appelle 'render_chat'
-        render_chat()
+        st.title("💬 Assistant ISMaiLa")
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]): st.write(msg["content"])
 
-# Lancement de l'app
-if __name__ == "__main__":
-    # simulation simplifiée de la session pour l'exemple
-    if 'messages' not in st.session_state:
-        st.session_state.messages = []
-    
-    render_main_interface()
+        if prompt := st.chat_input("Posez votre question..."):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"): st.write(prompt)
+            
+            response, _ = ismaila_agent.get_response(prompt, st.session_state.user_profile, st.session_state.username)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            with st.chat_message("assistant"): st.write(response)
+
+# --- LANCEMENT ---
+if not st.session_state.logged_in:
+    render_login_page()
+else:
+    render_chatbot_page()
