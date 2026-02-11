@@ -74,10 +74,10 @@ def render_chatbot_page():
         menu_options.append("🛡️ Dashboard Admin")
     
     mode = st.sidebar.radio("Navigation", menu_options)
-    opts = ["💬 Chatbot", "🌍 Contribution", "❓ Aide"]
+    opts = ["❓ Aide", "💬 Chatbot", "🌍 Contribution"]
 
     if st.session_state.user_profile == "ADMINISTRATION": opts.append("🛡️ Dashboard Admin")
-    mode = st.sidebar.radio("Navigation", opts)
+    mode = st.sidebar.radio("Navigation", opts, key="main_navigation_menu")
     
     if st.sidebar.button('Déconnexion 🚪'): logout()
 
@@ -110,5 +110,6 @@ def render_chatbot_page():
                 st.caption(f"Source: {src}")
 
 # --- MAIN ---
-if not st.session_state.logged_in: render_login_page()
+if not st.session_state.logged_in: 
+    render_login_page()
 else: render_chatbot_page()
