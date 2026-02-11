@@ -7,27 +7,10 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from db_connector import mongo_db
-# À insérer juste après l'import de mongo_db
-try:
-    # On teste si on peut compter les documents
-    count = mongo_db.contributions.count_documents({})
-    st.sidebar.success(f"📡 MongoDB Connecté ({count} contribs)")
-except Exception as e:
-    st.sidebar.error(f"📡 Erreur MongoDB : {e}")
 from agent import ismaila_agent
+from logger import db_logger
 from modules.contribution.view import render_contribution_page
 from modules.admin.admin_view import render_admin_page
-
-# Pour afficher le nombre de questions qui attendent une réponse
-try:
-    count = mongo_db.contributions.count_documents({})
-    pending = mongo_db.contributions.count_documents({"status": "en_attente"})
-    st.sidebar.success(f"📡 MongoDB Connecté")
-    st.sidebar.write(f"✅ {count} validées")
-    if pending > 0:
-        st.sidebar.warning(f"⏳ {pending} à répondre")
-except Exception as e:
-    st.sidebar.error(f"📡 Erreur MongoDB : {e}")
 
 # --- CONFIGURATION ---
 USER_PROFILES_RULES = {
@@ -38,7 +21,7 @@ DEFAULT_PROFILE = "ÉTUDIANT"
 
 st.set_page_config(page_title="ISMaiLa - Assistant Virtuel", layout="wide", page_icon="🎓")
 
-# --- GESTION DE LA SESSION ---
+# --- INITIALISATION SESSION ---
 if "logged_in" not in st.session_state:
     st.session_state.update({
         "logged_in": False,
@@ -49,86 +32,68 @@ if "logged_in" not in st.session_state:
     })
 
 def logout():
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
+    for key in list(st.session_state.keys()): del st.session_state[key]
     st.rerun()
 
 def get_user_profile(email):
     clean_email = email.strip().lower()
     for profile, keywords in USER_PROFILES_RULES.items():
-        for kw in keywords:
-            if kw.lower() in clean_email:
-                return profile
+        if any(kw.lower() in clean_email for kw in keywords): return profile
     return DEFAULT_PROFILE
 
-# --- VUES ---
-
+# --- RENDER PAGES ---
 def render_login_page():
-    st.title("🎓 Bienvenue sur l'assistant intelligent du Groupe ISM.")
-    st.markdown("Veuillez saisir votre nom et votre email pour démarrer la conversation.👤")
+    st.title("🎓 Assistant Intelligent ISM")
     with st.form("login_form"):
-        user_name = st.text_input("Prénom ou Pseudonyme")
-        user_email = st.text_input("Email Institutionnel")
-        submit = st.form_submit_button("Se connecter")
-        
-        if submit:
-            if user_email and user_name:
-                user_profile = get_user_profile(user_email)
-                st.session_state.update({
-                    "logged_in": True,
-                    "username": user_email,
-                    "name": user_name,
-                    "user_profile": user_profile
-                })
-                # Log de connexion
-                mongo_db.logs.insert_one({
-                    "event": "LOGIN", 
-                    "user": user_email, 
-                    "timestamp": pd.Timestamp.now()
-                })
+        u_name = st.text_input("Prénom")
+        u_email = st.text_input("Email Institutionnel")
+        if st.form_submit_button("Se connecter"):
+            if u_email and u_name:
+                u_prof = get_user_profile(u_email)
+                st.session_state.update({"logged_in": True, "username": u_email, "name": u_name, "user_profile": u_prof})
+                db_logger.log_connection_event("LOGIN", u_email, u_name, u_prof)
                 st.rerun()
-            else:
-                st.error("Veuillez remplir tous les champs.")
+            else: st.error("Champs requis.")
 
 def render_chatbot_page():
+    # Sidebar avec Statistiques
     st.sidebar.title("🛠️ Menu")
-    st.sidebar.info(f"Connecté : **{st.session_state.name}**\n({st.session_state.user_profile})")
-    
-    menu_options = ["💬 Chatbot", "🌍 Contribution"]
-    if st.session_state.user_profile == "ADMINISTRATION":
-        menu_options.append("🛡️ Dashboard Admin")
-    
-    mode = st.sidebar.radio("Navigation", menu_options)
+    try:
+        n_val = mongo_db.contributions.count_documents({"status": "valide"})
+        n_pend = mongo_db.contributions.count_documents({"status": "en_attente"})
+        st.sidebar.success(f"📡 DB Connectée")
+        st.sidebar.write(f"✅ {n_val} réponses")
+        if n_pend > 0: st.sidebar.warning(f"⏳ {n_pend} à valider")
+    except: st.sidebar.error("Erreur DB")
 
-    if st.sidebar.button('Déconnexion 🚪'):
-        logout()
+    st.sidebar.info(f"👤 {st.session_state.name}\n({st.session_state.user_profile})")
     
-    if mode == "🛡️ Dashboard Admin":
-        render_admin_page()
-    elif mode == "🌍 Contribution":
-        render_contribution_page()
+    opts = ["💬 Chatbot", "🌍 Contribution"]
+    if st.session_state.user_profile == "ADMINISTRATION": opts.append("🛡️ Dashboard Admin")
+    mode = st.sidebar.radio("Navigation", opts)
+    
+    if st.sidebar.button('Déconnexion 🚪'): logout()
+
+    if mode == "🛡️ Dashboard Admin": render_admin_page()
+    elif mode == "🌍 Contribution": render_contribution_page()
     else:
-        st.title("💬 Votre Assistant ISMaiLa à votre service")
+        st.title("💬 Assistant ISMaiLa")
+        if not st.session_state.messages:
+            st.session_state.messages.append({"role": "assistant", "content": f"Bonjour {st.session_state.name} !"})
 
-        if len(st.session_state.messages) == 0:
-            st.session_state.messages.append({
-                "role": "assistant", 
-                "content": f"Salut {st.session_state.name} ! Comment puis-je vous aider ?"
-            })
-        for msg in st.session_state.messages:
-            with st.chat_message(msg["role"]):
-                st.write(msg["content"])
+        for m in st.session_state.messages:
+            with st.chat_message(m["role"]): st.write(m["content"])
 
-        if prompt := st.chat_input("Posez votre question..."):
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"): st.write(prompt)
+        if p := st.chat_input("Posez votre question..."):
+            st.session_state.messages.append({"role": "user", "content": p})
+            with st.chat_message("user"): st.write(p)
             
-            response, _ = ismaila_agent.get_response(prompt, st.session_state.user_profile, st.session_state.username)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            with st.chat_message("assistant"): st.write(response)
+            res, src = ismaila_agent.get_response(p, st.session_state.user_profile, st.session_state.username)
+            st.session_state.messages.append({"role": "assistant", "content": res})
+            with st.chat_message("assistant"): 
+                st.write(res)
+                st.caption(f"Source: {src}")
 
-# --- LANCEMENT ---
-if not st.session_state.logged_in:
-    render_login_page()
-else:
-    render_chatbot_page()
+# --- MAIN ---
+if not st.session_state.logged_in: render_login_page()
+else: render_chatbot_page()

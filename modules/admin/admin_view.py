@@ -1,56 +1,66 @@
 import streamlit as st
 from db_connector import mongo_db
+from bson import ObjectId
 
 def render_admin_page():
-    st.title("🛡️ Administration ISMaiLa")
-    
-    # Onglets pour séparer les statistiques des actions
-    tab1, tab2 = st.tabs(["📝 Questions à traiter", "📊 Statistiques"])
+    st.title("🛡️ Espace Modération & Validation")
+    st.markdown("---")
 
-    with tab1:
-        st.subheader("Questions posées par les étudiants (en attente)")
+    # Onglets pour organiser l'espace admin
+    tab_pend, tab_stats = st.tabs(["⏳ Questions à traiter", "📊 Statistiques d'activité"])
+
+    with tab_pend:
+        st.subheader("Questions sans réponse détectées")
         
-        # On récupère les questions avec le statut 'en_attente'
-        # (Celles ajoutées automatiquement par l'agent ou par le formulaire de contribution)
-        pending_list = mongo_db.get_contributions(status="en_attente")
+        # On récupère les questions en attente
+        pending_questions = mongo_db.get_contributions(status="en_attente")
 
-        if not pending_list:
-            st.success("✅ Toutes les questions ont été traitées !")
+        if not pending_questions:
+            st.success("🎉 Félicitations ! Toutes les questions ont été traitées.")
         else:
-            for item in pending_list:
-                # Création d'une petite carte pour chaque question
-                with st.expander(f"❓ {item['question'][:80]}...", expanded=True):
-                    st.write(f"**Question complète :** {item['question']}")
-                    st.caption(f"Par : {item.get('user_name', 'Anonyme')} ({item.get('user_email', 'N/A')})")
+            st.info(f"Il y a actuellement **{len(pending_questions)}** question(s) en attente de réponse.")
+            
+            for item in pending_questions:
+                # Chaque question est présentée dans une boîte (expander ou container)
+                with st.container(border=True):
+                    col_info, col_action = st.columns([3, 1])
                     
-                    # Zone de texte pour rédiger la réponse officielle
-                    # On utilise l'ID MongoDB pour que chaque champ soit unique
-                    admin_res = st.text_area(
-                        "Rédiger la réponse officielle :", 
-                        key=f"res_{item['_id']}",
-                        placeholder="Tapez ici la réponse que le chatbot donnera..."
+                    with col_info:
+                        st.write(f"**Question :** {item['question']}")
+                        st.caption(f"Posée par : {item.get('user_name', 'Anonyme')} | Catégorie : {item.get('category', 'Auto')}")
+                    
+                    # Zone de saisie pour la réponse officielle
+                    admin_response = st.text_area(
+                        "Votre réponse officielle :", 
+                        key=f"input_{item['_id']}",
+                        placeholder="Écrivez ici la réponse qui sera apprise par le bot..."
                     )
-                    
-                    col1, col2 = st.columns([1, 4])
-                    with col1:
-                        if st.button("Valider ✅", key=f"val_{item['_id']}"):
-                            if admin_res.strip():
-                                # 1. On met à jour la réponse et le statut dans MongoDB
+
+                    c1, c2, c3 = st.columns([1, 1, 2])
+                    with c1:
+                        if st.button("Valider ✅", key=f"btn_val_{item['_id']}", type="primary"):
+                            if admin_response.strip():
+                                # Mise à jour dans MongoDB
                                 mongo_db.contributions.update_one(
                                     {"_id": item["_id"]},
                                     {"$set": {
-                                        "response": admin_res.strip(),
-                                        "status": "valide", # On utilise 'valide' comme dans ton agent
+                                        "response": admin_response.strip(),
+                                        "status": "valide",
                                         "validated_by": st.session_state.name
                                     }}
                                 )
-                                st.success("Réponse enregistrée et publiée !")
-                                st.rerun() # Rafraîchit pour faire disparaître la question traitée
+                                st.toast("Réponse publiée avec succès !", icon="✅")
+                                st.rerun()
                             else:
-                                st.error("Tu dois écrire une réponse avant de valider.")
+                                st.error("La réponse ne peut pas être vide.")
+                    
+                    with c2:
+                        if st.button("Supprimer 🗑️", key=f"btn_del_{item['_id']}"):
+                            mongo_db.contributions.delete_one({"_id": item["_id"]})
+                            st.toast("Question supprimée.")
+                            st.rerun()
 
-    with tab2:
-        # Ici tu peux appeler ta fonction existante qui affiche les graphiques
-        # provenant de admin_dashboard.py
+    with tab_stats:
+        # Intégration de votre dashboard de statistiques
         from admin_dashboard import render_admin_dashboard
         render_admin_dashboard()
