@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import sys
 import pandas as pd
+from modules.help.help_view import render_help_page
 
 # --- FIX DES CHEMINS ---
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -67,8 +68,14 @@ def render_chatbot_page():
     except: st.sidebar.error("Erreur DB")
 
     st.sidebar.info(f"👤 {st.session_state.name}\n({st.session_state.user_profile})")
+    # Ajoute "❓ Aide" aux options du menu
+    menu_options = ["💬 Chatbot", "🌍 Contribution", "❓ Aide"]
+    if st.session_state.user_profile == "ADMINISTRATION":
+        menu_options.append("🛡️ Dashboard Admin")
     
-    opts = ["💬 Chatbot", "🌍 Contribution"]
+    mode = st.sidebar.radio("Navigation", menu_options)
+    opts = ["💬 Chatbot", "🌍 Contribution", "❓ Aide"]
+
     if st.session_state.user_profile == "ADMINISTRATION": opts.append("🛡️ Dashboard Admin")
     mode = st.sidebar.radio("Navigation", opts)
     
@@ -76,6 +83,8 @@ def render_chatbot_page():
 
     if mode == "🛡️ Dashboard Admin": render_admin_page()
     elif mode == "🌍 Contribution": render_contribution_page()
+    elif mode == "❓ Aide":
+        render_help_page()
     else:
         st.title("💬 Votre Assistant ISMaiLa à votre service")
        # st.markdown("Bienvenue sur l'assistant intelligent du Groupe ISM.")
