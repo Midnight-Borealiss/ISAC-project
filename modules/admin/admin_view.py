@@ -7,21 +7,17 @@ def render_admin_page():
     st.markdown("---")
 
     # Onglets pour organiser l'espace admin
-    tab_pend, tab_stats = st.tabs(["⏳ Questions à traiter", "📊 Statistiques d'activité"])
+    tab1, tab2, tab3 = st.tabs(["⏳ À traiter", "✅ Validées récemment", "📊 Statistiques"])
 
-    with tab_pend:
-        st.subheader("Questions sans réponse détectées")
+    with tab1:
+        st.subheader("Questions en attente")
+        pending_list = mongo_db.get_contributions(status="en_attente")
         
-        # On récupère les questions en attente
-        pending_questions = mongo_db.get_contributions(status="en_attente")
-
-        if not pending_questions:
+        if not pending_list:
             st.success("🎉 Félicitations ! Toutes les questions ont été traitées.")
         else:
-            st.info(f"Il y a actuellement **{len(pending_questions)}** question(s) en attente de réponse.")
-            
-            for item in pending_questions:
-                # Chaque question est présentée dans une boîte (expander ou container)
+            for item in pending_list:
+                # Chaque question est présentée dans une boîte (container)
                 with st.container(border=True):
                     col_info, col_action = st.columns([3, 1])
                     
@@ -60,7 +56,28 @@ def render_admin_page():
                             st.toast("Question supprimée.")
                             st.rerun()
 
-    with tab_stats:
+    with tab2:
+        st.subheader("Historique des validations")
+        # On récupère les 10 dernières questions validées (triées par ID décroissant)
+        validated_list = list(mongo_db.contributions.find({"status": "valide"}).sort("_id", -1).limit(10))
+        
+        if not validated_list:
+            st.info("Aucune question n'a encore été validée.")
+        else:
+            for item in validated_list:
+                with st.container(border=True):
+                    st.write(f"**Question :** {item['question']}")
+                    st.success(f"**Réponse :** {item['response']}")
+                    st.caption(f"Validé par : {item.get('validated_by', 'Admin')}")
+                    
+                    if st.button("Modifier / Invalider ↩️", key=f"revert_{item['_id']}"):
+                        mongo_db.contributions.update_one(
+                            {"_id": item["_id"]},
+                            {"$set": {"status": "en_attente"}}
+                        )
+                        st.rerun()
+
+    with tab3:
         # Intégration de votre dashboard de statistiques
         from admin_dashboard import render_admin_dashboard
         render_admin_dashboard()

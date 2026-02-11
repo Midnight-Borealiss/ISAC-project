@@ -43,7 +43,7 @@ def get_user_profile(email):
 
 # --- RENDER PAGES ---
 def render_login_page():
-    st.title("🎓 Assistant Intelligent ISM")
+    st.title("🎓 Bienvenue sur ISMaiLa")
     with st.form("login_form"):
         u_name = st.text_input("Prénom")
         u_email = st.text_input("Email Institutionnel")
@@ -77,12 +77,18 @@ def render_chatbot_page():
     if mode == "🛡️ Dashboard Admin": render_admin_page()
     elif mode == "🌍 Contribution": render_contribution_page()
     else:
-        st.title("💬 Assistant ISMaiLa")
-        if not st.session_state.messages:
-            st.session_state.messages.append({"role": "assistant", "content": f"Bonjour {st.session_state.name} !"})
+        st.title("💬 Votre Assistant ISMaiLa à votre service")
+       # st.markdown("Bienvenue sur l'assistant intelligent du Groupe ISM.")
 
-        for m in st.session_state.messages:
-            with st.chat_message(m["role"]): st.write(m["content"])
+        if len(st.session_state.messages) == 0:
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": f"Salut {st.session_state.name} ! Comment puis-je vous aider ?"
+            })
+
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
 
         if p := st.chat_input("Posez votre question..."):
             st.session_state.messages.append({"role": "user", "content": p})
