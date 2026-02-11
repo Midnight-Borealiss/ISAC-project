@@ -18,6 +18,17 @@ from agent import ismaila_agent
 from modules.contribution.view import render_contribution_page
 from modules.admin.admin_view import render_admin_page
 
+# Pour afficher le nombre de questions qui attendent une réponse
+try:
+    count = mongo_db.contributions.count_documents({})
+    pending = mongo_db.contributions.count_documents({"status": "en_attente"})
+    st.sidebar.success(f"📡 MongoDB Connecté")
+    st.sidebar.write(f"✅ {count} validées")
+    if pending > 0:
+        st.sidebar.warning(f"⏳ {pending} à répondre")
+except Exception as e:
+    st.sidebar.error(f"📡 Erreur MongoDB : {e}")
+
 # --- CONFIGURATION ---
 USER_PROFILES_RULES = {
     "ADMINISTRATION": ["minawade005@gmail.com", "ismaila.admin@uam.sn"],
@@ -97,9 +108,16 @@ def render_chatbot_page():
     elif mode == "🌍 Contribution":
         render_contribution_page()
     else:
-        st.title("💬 Assistant ISMaiLa")
+        st.title("💬 Votre Assistant ISMaiLa à votre service")
+
+        if len(st.session_state.messages) == 0:
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": f"Salut {st.session_state.name} ! Comment puis-je vous aider ?"
+            })
         for msg in st.session_state.messages:
-            with st.chat_message(msg["role"]): st.write(msg["content"])
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
 
         if prompt := st.chat_input("Posez votre question..."):
             st.session_state.messages.append({"role": "user", "content": prompt})

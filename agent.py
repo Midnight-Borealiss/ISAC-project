@@ -10,17 +10,32 @@ class IsmailaAgent:
 
         # 2. Recherche dans MongoDB (on cherche le prompt dans le champ 'question')
         # On utilise $regex avec l'option 'i' pour ignorer la casse (Majuscules/Minuscules)
+        # Dans agent.py
         match = mongo_db.contributions.find_one({
             "question": {"$regex": prompt.strip(), "$options": "i"},
-            "status": "validé"
+            "status": "valide"  # Changé de "validé" à "valide" pour correspondre à db_connector.py
         })
 
         # 3. Vérification du résultat
         if match and match.get("response"):
             return match["response"], "Base de connaissances interne"
 
-        # 4. Si aucune réponse validée n'est trouvée
-        return "Je n'ai pas trouvé de réponse officielle validée pour cette question. Je transmets votre demande aux administrateurs.", "IA ISMaiLa"
+        # --- NOUVELLE LOGIQUE : AUTO-AJOUT ---
+        # Si on arrive ici, c'est qu'aucune réponse n'a été trouvée
+    
+         # On vérifie si la question n'existe pas déjà en attente pour éviter les doublons
+        existing = mongo_db.contributions.find_one({"question": prompt.strip(), "status": "en_attente"})
+    
+        if not existing:
+            mongo_db.add_contribution(
+        question=prompt.strip(),
+        response="En attente de réponse...", # Message par défaut pour l'admin
+        user_name=username,
+        user_email="auto@ismaila.ai",
+        category="Question non répondue"
+        )
+
+        return "Je n'ai pas trouvé de réponse officielle. Votre question a été transmise aux administrateurs pour validation.", "IA ISMaiLa"
 
 # On instancie l'agent pour qu'il soit importable
 ismaila_agent = IsmailaAgent()
