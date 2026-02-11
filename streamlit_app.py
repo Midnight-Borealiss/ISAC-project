@@ -20,7 +20,7 @@ from modules.admin.admin_view import render_admin_page
 
 # --- CONFIGURATION ---
 USER_PROFILES_RULES = {
-    "ADMINISTRATION": ["mina@gmail.com", "ismaila.admin@uam.sn"],
+    "ADMINISTRATION": ["minawade005@gmail.com", "ismaila.admin@uam.sn"],
     "ÉTUDIANT": ["@edu.uam.sn", "@uam.sn"]
 }
 DEFAULT_PROFILE = "ÉTUDIANT"
