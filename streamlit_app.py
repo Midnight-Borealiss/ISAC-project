@@ -2,7 +2,6 @@ import streamlit as st
 import os
 import sys
 import pandas as pd
-from modules.help.help_view import render_help_page
 
 # --- FIX DES CHEMINS ---
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -12,21 +11,21 @@ from agent import ismaila_agent
 from logger import db_logger
 from modules.contribution.view import render_contribution_page
 from modules.admin.admin_view import render_admin_page
-from modules.help.help_view import render_help_page
+from modules.help.view import render_help_page # Un seul import propre ici
 
 # --- CONFIGURATION ---
-USER_PROFILES_RULES = {
-    "ADMINISTRATION": ["minawade005@gmail.com", "ismaila.admin@uam.sn"],
-    "ÉTUDIANT": ["@edu.uam.sn", "@uam.sn"]
-}
-DEFAULT_PROFILE = "ÉTUDIANT"
+ADMIN_EMAILS = ["minawade005@gmail.com", "ismaila.admin@uam.sn"]
 
 st.set_page_config(page_title="ISMaiLa - Assistant Virtuel", layout="wide", page_icon="🎓")
 
 # --- INITIALISATION SESSION ---
 if "logged_in" not in st.session_state:
     st.session_state.update({
-        "logged_in": False, "username": None, "name": None, "messages": [], "user_profile": "ÉTUDIANT"
+        "logged_in": False, 
+        "username": None, 
+        "name": None, 
+        "messages": [], 
+        "user_profile": "ÉTUDIANT"
     })
 
 def logout():
@@ -52,12 +51,15 @@ def render_chat_interface():
             st.write(res)
             st.caption(f"Source: {src}")
 
-# --- PAGE PRINCIPALE APRÈS LOGIN ---
+# --- PAGE PRINCIPALE ---
 def render_chatbot_page():
-    # Barre latérale UNIQUE
     st.sidebar.title("🛠️ Menu ISMaiLa")
+    st.sidebar.write(f"👤 **{st.session_state.name}**")
     
+    # 1. On définit les options de base
     opts = ["💬 Chatbot", "🌍 Contribution", "❓ Aide"]
+    
+    # 2. On ajoute l'option Admin SI le profil est correct
     if st.session_state.user_profile == "ADMINISTRATION":
         opts.append("🛡️ Dashboard Admin")
     
@@ -65,7 +67,9 @@ def render_chatbot_page():
     
     if st.sidebar.button('Déconnexion 🚪'): logout()
     
-    # Affichage du contenu
+    st.sidebar.divider()
+
+    # 3. Routage strict
     if mode == "🛡️ Dashboard Admin":
         render_admin_page()
     elif mode == "🌍 Contribution":
@@ -81,10 +85,26 @@ if not st.session_state.logged_in:
     with st.form("login"):
         u_name = st.text_input("Prénom")
         u_email = st.text_input("Email Institutionnel")
+        
         if st.form_submit_button("Se connecter"):
             if u_email and u_name:
-                prof = "ADMINISTRATION" if u_email in ["minawade005@gmail.com", "ismaila.admin@uam.sn"] else "ÉTUDIANT"
-                st.session_state.update({"logged_in": True, "username": u_email, "name": u_name, "user_profile": prof})
+                # Nettoyage de l'email pour éviter les erreurs de saisie
+                clean_email = u_email.strip().lower()
+                
+                # Attribution du profil
+                if clean_email in [email.lower() for email in ADMIN_EMAILS]:
+                    prof = "ADMINISTRATION"
+                else:
+                    prof = "ÉTUDIANT"
+                
+                st.session_state.update({
+                    "logged_in": True, 
+                    "username": clean_email, 
+                    "name": u_name, 
+                    "user_profile": prof
+                })
                 st.rerun()
+            else:
+                st.error("Veuillez remplir tous les champs.")
 else:
     render_chatbot_page()
