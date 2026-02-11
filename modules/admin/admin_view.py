@@ -1,55 +1,56 @@
 import streamlit as st
-import pandas as pd
 from db_connector import mongo_db
 
 def render_admin_page():
-    st.title("🛡️ Panel Administration")
+    st.title("🛡️ Administration ISMaiLa")
     
-    t1, t2 = st.tabs(["✅ Validation", "📊 Historique"])
+    # Onglets pour séparer les statistiques des actions
+    tab1, tab2 = st.tabs(["📝 Questions à traiter", "📊 Statistiques"])
 
-    with t1:
-        st.subheader("Modération des contributions")
-        # On récupère les questions en attente
-        to_check = list(mongo_db.contributions.find({"status": "en_attente"}))
+    with tab1:
+        st.subheader("Questions posées par les étudiants (en attente)")
         
-        if not to_check:
-            st.info("Aucune contribution à valider.")
-            
-        for item in to_check:
-            # Sécurisation : on utilise .get() pour éviter le KeyError
-            question = item.get('question', 'Pas de question')
-            reponse_proposee = item.get('response', '') 
-            auteur = item.get('author_name', 'Anonyme')
+        # On récupère les questions avec le statut 'en_attente'
+        # (Celles ajoutées automatiquement par l'agent ou par le formulaire de contribution)
+        pending_list = mongo_db.get_contributions(status="en_attente")
 
-            # On n'affiche que s'il y a une réponse à valider
-            if reponse_proposee:
-                with st.container(border=True):
-                    st.write(f"**Q:** {question}")
-                    st.write(f"**Auteur:** {auteur}")
-                    st.info(f"**R proposée:** {reponse_proposee}")
+        if not pending_list:
+            st.success("✅ Toutes les questions ont été traitées !")
+        else:
+            for item in pending_list:
+                # Création d'une petite carte pour chaque question
+                with st.expander(f"❓ {item['question'][:80]}...", expanded=True):
+                    st.write(f"**Question complète :** {item['question']}")
+                    st.caption(f"Par : {item.get('user_name', 'Anonyme')} ({item.get('user_email', 'N/A')})")
                     
-                    col1, col2 = st.columns(2)
-                    if col1.button("✅ Approuver", key=f"ok_{item['_id']}"):
-                        mongo_db.contributions.update_one(
-                            {"_id": item["_id"]}, 
-                            {"$set": {"status": "validé"}}
-                        )
-                        st.rerun()
-                    if col2.button("❌ Rejeter", key=f"no_{item['_id']}"):
-                        # On réinitialise la réponse ou on supprime
-                        mongo_db.contributions.update_one(
-                            {"_id": item["_id"]}, 
-                            {"$set": {"response": "", "status": "en_attente"}}
-                        )
-                        st.rerun()
+                    # Zone de texte pour rédiger la réponse officielle
+                    # On utilise l'ID MongoDB pour que chaque champ soit unique
+                    admin_res = st.text_area(
+                        "Rédiger la réponse officielle :", 
+                        key=f"res_{item['_id']}",
+                        placeholder="Tapez ici la réponse que le chatbot donnera..."
+                    )
+                    
+                    col1, col2 = st.columns([1, 4])
+                    with col1:
+                        if st.button("Valider ✅", key=f"val_{item['_id']}"):
+                            if admin_res.strip():
+                                # 1. On met à jour la réponse et le statut dans MongoDB
+                                mongo_db.contributions.update_one(
+                                    {"_id": item["_id"]},
+                                    {"$set": {
+                                        "response": admin_res.strip(),
+                                        "status": "valide", # On utilise 'valide' comme dans ton agent
+                                        "validated_by": st.session_state.name
+                                    }}
+                                )
+                                st.success("Réponse enregistrée et publiée !")
+                                st.rerun() # Rafraîchit pour faire disparaître la question traitée
+                            else:
+                                st.error("Tu dois écrire une réponse avant de valider.")
 
-    with t2:
-        st.subheader("Toutes les données")
-        all_docs = list(mongo_db.contributions.find().sort("created_at", -1))
-        if all_docs:
-            df = pd.DataFrame(all_docs)
-            # On s'assure que les colonnes existent dans le DataFrame pour l'affichage
-            cols_to_show = ["question", "author_name", "status", "response"]
-            # Filtrer seulement les colonnes qui existent réellement
-            existing_cols = [c for c in cols_to_show if c in df.columns]
-            st.dataframe(df[existing_cols])
+    with tab2:
+        # Ici tu peux appeler ta fonction existante qui affiche les graphiques
+        # provenant de admin_dashboard.py
+        from admin_dashboard import render_admin_dashboard
+        render_admin_dashboard()
