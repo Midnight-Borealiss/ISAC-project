@@ -4,68 +4,41 @@ from datetime import datetime
 from bson import ObjectId
 import streamlit as st
 
-# Récupération de l'URI depuis les secrets de Streamlit
+# Configuration de la connexion
 try:
-    # Dans Streamlit Cloud, on utilise st.secrets
-    MONGO_URI = st.secrets["MONGO_URI"]
+    MONGO_URI = st.secrets["MONGO_URI"] if "MONGO_URI" in st.secrets else os.getenv("MONGO_URI")
     client = MongoClient(MONGO_URI)
-    # On définit mongo_db pour qu'il soit exportable
-    mongo_db = client["ismaila_db"] 
-    
-    # Test de connexion rapide
+    # CHANGEMENT : On pointe vers la base ISAC
+    mongo_db_raw = client["isac_db"] 
     client.admin.command('ping')
 except Exception as e:
     st.error(f"Erreur de connexion MongoDB : {e}")
-    mongo_db = None
+    mongo_db_raw = None
 
-try:
-    mongo_db.command('ping')
-    print("✅ Connexion MongoDB réussie")
-except Exception as e:
-    print(f"❌ Erreur MongoDB : {e}")
-
-class MongoManager:
+class ISACDataManager:
     def __init__(self):
-        # Récupère l'URI de connexion depuis les secrets Streamlit (Cloud) ou variables d'environnement (Local)
-        self.uri = st.secrets["MONGO_URI"] if "MONGO_URI" in st.secrets else os.getenv("MONGO_URI")
-        self.client = MongoClient(self.uri)
-        self.db = self.client['ismaila_db']
-        # Collections
-        self.logs = self.db['logs']
-        self.contributions = self.db['contributions']
+        self.db = mongo_db_raw
+        # RENOMMAGE DES COLLECTIONS POUR LE MÉDICAL
+        self.consultations = self.db['consultations'] # Anciennement logs_interactions
+        self.protocoles = self.db['protocoles']       # Anciennement contributions
+        self.users = self.db['users_patients']       # Profils santé
 
-    def log_event(self, event_type, email, name, details=""):
-        """Enregistre chaque action importante (Login, Question) dans la collection logs."""
-        self.logs.insert_one({
-            "event_type": event_type,
-            "user_email": email,
-            "user_name": name,
-            "details": details,
-            "timestamp": datetime.now()
+    def save_anamnese(self, user_id, data):
+        """Enregistre le bilan de santé structuré"""
+        doc = {
+            "user_id": user_id,
+            "timestamp": datetime.now(),
+            "donnees_cliniques": data,
+            "statut": "complet"
+        }
+        return self.consultations.insert_one(doc)
+
+    def get_protocol(self, keyword):
+        """Cherche une règle de triage ou une bonne pratique"""
+        return self.protocoles.find_one({
+            "keywords": {"$regex": keyword, "$options": "i"},
+            "status": "valide"
         })
 
-    def add_contribution(self, question, response, user_name, user_email, category="Autre"):
-        """Ajoute une nouvelle proposition (question ou réponse) dans la base de données."""
-        return self.contributions.insert_one({
-            "question": question,
-            "response": response,
-            "user_name": user_name,
-            "user_email": user_email,
-            "category": category,
-            "status": "en_attente", # Par défaut, nécessite une validation admin
-            "timestamp": datetime.now()
-        })
-
-    def get_contributions(self, status="en_attente"):
-        """Récupère la liste des contributions filtrées par statut (ex: en_attente ou valide)."""
-        return list(self.contributions.find({"status": status}))
-
-    def validate_contribution(self, contrib_id):
-        """Change le statut d'une contribution à 'valide' pour qu'elle soit utilisée par le chatbot."""
-        return self.contributions.update_one(
-            {"_id": ObjectId(contrib_id)},
-            {"$set": {"status": "valide", "validated_at": datetime.now()}}
-        )
-
-# Instance unique pour être utilisée partout dans le projet
-mongo_db = MongoManager()
+# Instance unique pour le projet ISAC
+db_manager = ISACDataManager()

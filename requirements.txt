@@ -1,6 +1,17 @@
-streamlit
-pymongo
-pandas
+# --- Framework Principal ---
+streamlit>=1.30.0
+
+# --- Base de Données ---
+pymongo[srv]
 python-dotenv
-openai
-google-generativeai
+
+# --- Analyse de Données & Dashboard ---
+pandas
+numpy
+plotly  # Pour des graphiques médicaux plus interactifs
+
+# --- Génération de Rapports (Nouveauté ISAC) ---
+fpdf2   # Bibliothèque moderne pour générer les bilans de santé en PDF
+
+# --- Utilitaires ---
+requests
