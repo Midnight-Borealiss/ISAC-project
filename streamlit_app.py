@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import sys
 
+st.write("Démarrage d'ISAC en cours...")
 # --- CONFIGURATION ISAC ---
 ADMIN_EMAILS = ["minawade005@gmail.com"] # Tes emails médecins/admin
 
