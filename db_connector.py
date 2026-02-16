@@ -1,3 +1,4 @@
+
 import os
 from pymongo import MongoClient
 from datetime import datetime
@@ -42,3 +43,4 @@ class ISACDataManager:
 
 # Instance unique pour le projet ISAC
 db_manager = ISACDataManager()
+

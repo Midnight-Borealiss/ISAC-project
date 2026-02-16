@@ -1,19 +1,36 @@
-# 🎓 ISMaiLa - Assistant Virtuel Intelligent (Groupe ISM)
+# 🏥 ISAC - Assistant de Santé Augmenté & Connecté
 
-ISMaiLa est une plateforme collaborative et intelligente conçue pour assister les étudiants du Groupe ISM. Elle combine un Chatbot IA et un système de gestion de connaissances alimenté par la communauté.
+**ISAC** est un assistant médical intelligent conçu pour orienter les patients, collecter les constantes vitales et faciliter le triage clinique. Initialement basé sur le moteur ISMaiLa, ISAC a été transformé pour répondre aux exigences du secteur de la santé (E-Santé).
 
-## 🚀 Fonctionnalités clés
 
-- **Chatbot Hybride** : Recherche d'abord des réponses validées dans MongoDB avant de solliciter l'IA.
-- **Espace Contribution** : Permet aux étudiants de poser des questions et de proposer des réponses.
-- **Panel Administration** : Interface sécurisée pour valider les contributions et surveiller les logs.
-- **Architecture RAG-Ready** : Structure modulaire facilitant le passage vers une recherche sémantique avancée.
 
-## 📁 Structure du Projet
+---
+
+## 🚀 Fonctionnalités Clés
+
+* **Triage Intelligent (Red Flags)** : Détection automatique des mots-clés d'urgence vitale avec alertes immédiates (SAMU/Urgences).
+* **Collecte de Constantes** : Formulaire intégré en barre latérale pour l'âge, le poids et la température.
+* **Anamnèse Dynamique** : Aide le patient à structurer son récit de symptômes pour le médecin.
+* **Espace Praticien (Admin)** : Tableau de bord permettant aux médecins de consulter les bilans et de valider les protocoles de soins.
+* **Architecture Data-Driven** : Base de connaissances gérée via MongoDB pour une mise à jour en temps réel sans modification du code.
+
+## 🛠️ Stack Technique
+
+* **Interface** : [Streamlit](https://streamlit.io/)
+* **Intelligence** : Moteur de triage hybride (Mots-clés & LLM ready)
+* **Base de Données** : [MongoDB Atlas](https://www.mongodb.com/atlas)
+* **Backend** : Python 3.12+
+
+---
+
+## 📂 Structure du Projet
 
 ```text
-├── streamlit_app.py      # Point d'entrée unique
-├── db_connector.py       # Gestionnaire de base de données MongoDB
-├── agent.py              # Logique de décision (DB vs IA)
-├── core/                 # Sécurité et authentification
-└── modules/              # Modules métiers (Chat, Contribution, Admin)
+ISAC/
+├── streamlit_app.py     # Point d'entrée de l'application
+├── agent.py             # Logique de triage et moteur de réponse
+├── db_connector.py      # Connexion sécurisée à MongoDB Atlas
+├── admin_view.py        # Interface dédiée aux médecins
+├── chat_view.py         # Interface de consultation patient
+├── seed_db.py           # Script d'initialisation des protocoles médicaux
+└── requirements.txt     # Dépendances du projet
