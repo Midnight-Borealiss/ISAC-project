@@ -8,36 +8,29 @@ load_dotenv()
 
 class MongoDBConnector:
     def __init__(self):
-        """
-        Initialise la connexion à MongoDB en utilisant soit les secrets Streamlit (Cloud),
-        soit les variables d'environnement locales (.env).
-        """
-        # 1. Récupération de l'URI (Priorité à Streamlit Cloud)
+        st.write("🔍 Tentative de récupération de l'URI...")
         if "MONGO_URI" in st.secrets:
             self.uri = st.secrets["MONGO_URI"]
         else:
             self.uri = os.getenv("MONGO_URI")
 
-        # 2. Vérification de la présence de l'URI
         if not self.uri:
-            st.error("❌ Erreur : MONGO_URI est introuvable. Vérifiez votre fichier .env ou les Secrets Streamlit.")
-            self.client = None
+            st.error("❌ URI manquante dans les secrets !")
             return
 
         try:
-            # 3. Établissement de la connexion
-            self.client = MongoClient(self.uri, serverSelectionTimeoutMS=5000)
+            st.write("🔌 Connexion au cluster en cours...")
+            # On réduit le timeout à 2 secondes pour ne pas attendre 30s
+            self.client = MongoClient(self.uri, serverSelectionTimeoutMS=2000)
             
-            # Nom de la base de données (que nous avons configurée sur ISAC-Cluster)
-            self.db = self.client['isac_db']
-            
-            # Test de connexion rapide
+            # On force un test immédiat
             self.client.admin.command('ping')
+            st.write("✅ Ping réussi !")
             
+            self.db = self.client['isac_db']
         except Exception as e:
-            st.error(f"❌ Erreur de connexion à MongoDB : {e}")
+            st.error(f"❌ Erreur réseau ou identifiants : {e}")
             self.client = None
-
     def get_collection(self, collection_name):
         """Récupère une collection spécifique."""
         if self.client:
