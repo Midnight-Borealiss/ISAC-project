@@ -1,37 +1,42 @@
 import streamlit as st
 import os
 import sys
-# IMPORT IMPORTANT : On importe l'instance déjà créée dans db_connector
-from db_connector import db_connector 
 
-st.set_page_config(page_title="Interface Soin Avant Consultation  MVP")
+# 1. CETTE COMMANDE DOIT ÊTRE LA TOUTE PREMIÈRE (ET UNIQUE)
+st.set_page_config(page_title="ISAC - Interface de Soin Avant Consultation", layout="wide", page_icon="🏥")
+
+# 2. IMPORTS (Après la config de page)
+try:
+    from db_connector import db_connector 
+except Exception as e:
+    st.error(f"Erreur d'import du connecteur : {e}")
+
+# 3. TITRE ET ÉTAT DE CONNEXION
 st.title("🏥 Bienvenue sur ISAC")
 
-st.info("Démarrage du système...")
-
-# On vérifie si la connexion MongoDB est active
-if db_connector.client:
-    st.success("✅ Connexion à la base de données ISAC établie.")
+# Vérification silencieuse de la connexion
+if db_connector and db_connector.client:
+    st.sidebar.success("✅ Base de données connectée")
 else:
-    st.error("❌ La base de données est déconnectée. Vérifiez les logs.")
-
-
-ADMIN_EMAILS = ["minawade005@gmail.com"] # Tes emails médecins/admin
-
-st.set_page_config(page_title="ISAC - Assistant Médical", layout="wide", page_icon="🏥")
+    st.sidebar.error("❌ Base de données déconnectée")
+    st.stop() # Arrête l'exécution ici si la DB est cruciale
 
 # --- INITIALISATION SESSION ---
 if "logged_in" not in st.session_state:
-    st.session_state.update({"logged_in": False, "username": None, "user_profile": None, "messages": []})
+    st.session_state.update({
+        "logged_in": False, 
+        "name": None, 
+        "user_profile": "PATIENT", 
+        "messages": []
+    })
 
+# --- FONCTION PROFIL SANTÉ ---
 def render_sidebar_health_profile():
-    """Formulaire de constantes dans la barre latérale"""
     st.sidebar.header("📋 Mon Profil Santé")
     age = st.sidebar.number_input("Âge", min_value=0, max_value=120, value=25)
     poids = st.sidebar.number_input("Poids (kg)", min_value=0, max_value=250, value=70)
     temp = st.sidebar.slider("Température (°C)", 35.0, 42.0, 37.0, 0.1)
     
-    # On stocke ces données pour que l'agent.py y ait accès
     st.session_state["health_metrics"] = {
         "age": age,
         "poids": poids,
@@ -41,23 +46,33 @@ def render_sidebar_health_profile():
     if temp >= 38.5:
         st.sidebar.warning("⚠️ Fièvre détectée")
 
-# --- LOGIQUE DE NAVIGATION ---
-if st.session_state.logged_in:
+# --- LOGIQUE DE NAVIGATION / AUTH ---
+# (Note: Ajoute ici ton formulaire de login si logged_in est False)
+if not st.session_state.logged_in:
+    st.info("Veuillez vous connecter pour accéder à ISAC.")
+    # Exemple rapide de bouton pour tester
+    if st.button("Connexion Test"):
+        st.session_state.logged_in = True
+        st.session_state.name = "Utilisateur"
+        st.rerun()
+
+else:
     render_sidebar_health_profile()
     
     st.sidebar.title(f"Bonjour, {st.session_state.name}")
     opts = ["💬 Ma Consultation", "📅 Prévention & Rappels", "📖 Guide Santé"]
+    
     if st.session_state.user_profile == "ADMINISTRATION":
         opts.append("🛡️ Espace Praticien")
     
     mode = st.sidebar.radio("Navigation", opts)
     
-    # --- LES IMPORTS CORRIGÉS ICI ---
+    # --- NAVIGATION ---
     if mode == "💬 Ma Consultation":
-        from chat_view import render_chat  # Vérifie que le fichier s'appelle bien chat_view.py
+        from chat_view import render_chat
         render_chat()
     elif mode == "📅 Prévention & Rappels":
-        from view import render_health_page # Vérifie que la fonction s'appelle render_health_page
+        from view import render_health_page
         render_health_page()
     elif mode == "📖 Guide Santé":
         from help_view import render_help_page
