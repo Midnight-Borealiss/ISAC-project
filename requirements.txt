@@ -1,3 +1,4 @@
 streamlit
-pymongo
+pymongo[srv]
 python-dotenv
+dnspython
