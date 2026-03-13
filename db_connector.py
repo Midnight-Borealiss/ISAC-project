@@ -1,35 +1,29 @@
 import os
 import streamlit as st
 from pymongo import MongoClient
-from dotenv import load_dotenv
-
-# Charger les variables d'environnement pour le développement local
-load_dotenv()
+import os
 
 class MongoDBConnector:
     def __init__(self):
-        st.write("🔍 Tentative de récupération de l'URI...")
-        if "MONGO_URI" in st.secrets:
-            self.uri = st.secrets["MONGO_URI"]
-        else:
-            self.uri = os.getenv("MONGO_URI")
-
+        # LOG DE DEBUG 1
+        st.write("🔍 Analyse des secrets Streamlit...")
+        
+        self.uri = st.secrets.get("MONGO_URI")
+        
         if not self.uri:
-            st.error("❌ URI manquante dans les secrets !")
+            st.error("❌ MONGO_URI introuvable dans les Secrets !")
+            self.client = None
             return
 
         try:
-            st.write("🔌 Connexion au cluster en cours...")
-            # On réduit le timeout à 2 secondes pour ne pas attendre 30s
-            self.client = MongoClient(self.uri, serverSelectionTimeoutMS=2000)
-            
-            # On force un test immédiat
-            self.client.admin.command('ping')
-            st.write("✅ Ping réussi !")
-            
+            # LOG DE DEBUG 2
+            st.write("🔌 Tentative de connexion au Cluster...")
+            self.client = MongoClient(self.uri, serverSelectionTimeoutMS=5000)
+            self.client.admin.command('ping') # Test de réponse
             self.db = self.client['isac_db']
+            st.write("✅ Cluster joint avec succès.")
         except Exception as e:
-            st.error(f"❌ Erreur réseau ou identifiants : {e}")
+            st.error(f"❌ Erreur réseau : {e}")
             self.client = None
     def get_collection(self, collection_name):
         """Récupère une collection spécifique."""
@@ -41,6 +35,6 @@ class MongoDBConnector:
         """Ferme la connexion proprement."""
         if self.client:
             self.client.close()
-
-# Instance partagée pour être utilisée dans agent.py ou streamlit_app.py
+# On crée l'instance ICI pour qu'elle soit partagée
 db_connector = MongoDBConnector()
+

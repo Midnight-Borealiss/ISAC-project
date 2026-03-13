@@ -1,9 +1,21 @@
 import streamlit as st
 import os
 import sys
+# IMPORT IMPORTANT : On importe l'instance déjà créée dans db_connector
+from db_connector import db_connector 
 
-st.write("Démarrage d'ISAC en cours...")
-# --- CONFIGURATION ISAC ---
+st.set_page_config(page_title="Interface Soin Avant Consultation  MVP")
+st.title("🏥 Bienvenue sur ISAC")
+
+st.info("Démarrage du système...")
+
+# On vérifie si la connexion MongoDB est active
+if db_connector.client:
+    st.success("✅ Connexion à la base de données ISAC établie.")
+else:
+    st.error("❌ La base de données est déconnectée. Vérifiez les logs.")
+
+
 ADMIN_EMAILS = ["minawade005@gmail.com"] # Tes emails médecins/admin
 
 st.set_page_config(page_title="ISAC - Assistant Médical", layout="wide", page_icon="🏥")
